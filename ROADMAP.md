@@ -47,7 +47,8 @@ Settings > Vehicles stores the active vehicle and its dimensions, weights and co
 - Phase 3: estimate tolls from distance and a rate when no TollGuru key is set, or use the
   user's own TollGuru key. Show fuel and energy cost from the Italian live feed, with a custom
   price for the route. Currency is EUR for now.
-- Phase 1B: optional catalog autofill by make, model and year. Manual entry stays available.
+- FleetByte and EEA CO2 catalog matching, and multi-database merging: deferred. AI search and
+  manual entry are the current sources.
 - Plate lookup: no provider is chosen. Keep it optional and user-keyed when one is.
 
 ## Less to Google

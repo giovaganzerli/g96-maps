@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.vela.ui.map.MapViewModel
 import app.vela.ui.settings.sections.AboutSettingsScreen
+import app.vela.ui.settings.sections.AiSettingsScreen
 import app.vela.ui.settings.sections.AppearanceSettingsScreen
 import app.vela.ui.settings.sections.PrivacySettingsScreen
 import app.vela.ui.settings.sections.PerformanceSettingsScreen
@@ -105,7 +106,8 @@ fun SettingsScreen(vm: MapViewModel, navController: androidx.navigation.NavHostC
                         SettingsSection.MAP -> MapSettingsScreen(onBack = toHub, homeSet = state.home != null)
                         SettingsSection.PLACES -> PlacesSettingsScreen(onBack = toHub)
                         SettingsSection.NAVIGATION -> NavigationSettingsScreen(vm, onBack = toHub)
-                        SettingsSection.VEHICLES -> VehiclesSettingsScreen(vm, onBack = toHub)
+                        SettingsSection.VEHICLES -> VehiclesSettingsScreen(onBack = toHub)
+                        SettingsSection.AI -> AiSettingsScreen(onBack = toHub)
                         SettingsSection.VOICE -> VoiceSettingsScreen(vm, onBack = toHub, openLibrary = openVoiceLibrary)
                         // Quick search buttons is a page under Search: pushed on top of it, so Back
                         // returns to Search, the one stack deeper than map, hub, page.

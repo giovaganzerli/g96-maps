@@ -32,7 +32,12 @@ logged-out browser's. They are not tied to an account.
   those links.
 - **A few open services** get small, specific requests (map tiles, routing, address lookups,
   transit boards, terrain). The table lists them.
-- **Your places, history and settings stay on the phone.** There is no cloud sync.
+- **AI vehicle search is opt-in.** Only after you save a provider key in Settings > AI and
+  press Search with AI does Vela send that one provider the make, model, year and fuel, the
+  free text with plate-like tokens removed, and the shared schema. The plate, notes, routing
+  mode and the rest of the garage never go with it. There is no built-in key and no fallback.
+- **Your places, history and settings stay on the phone.** There is no cloud sync. The vehicle
+  garage and the encrypted AI keys are never included in Android backup or phone transfer.
 
 ## What each service receives
 
@@ -64,8 +69,13 @@ logged-out browser's. They are not tied to an account.
 | **velamaps.org** (Cloudflare Pages) | at launch, only when GitHub does not answer for the settings file | your IP. A plain file download, the same for everyone |
 | **GitHub release files** | downloading regions, voices and app updates, and streaming the place, building and house-number layers as you browse | your IP, and which file or byte range is fetched, which implies your rough map area |
 | **GitHub release files** (UK fuel prices) | a gas station in the UK shows up in your results or on a place page without a price; at most every 3 hours after that | your IP. The file is the same one nationwide for everyone, so it says only that you looked at a UK gas station |
+| **OpenAI, Anthropic, Google Gemini or OpenRouter** (AI vehicle search) | only when you press Search with AI, and only the provider active in Settings > AI | your IP, your own API key, the model id, the structured make/model/year/fuel, and the optional free text after plate-like tokens were removed. Not the plate, notes, routing mode or the saved garage |
 
 None of these receives a Google account, a name, a device id or your contacts.
+
+The AI request is not sent when you enter a vehicle manually, and it is not retried on another
+provider when the active one fails. The key is stored encrypted with the Android Keystore in
+the `vela_ai` file; that file is excluded from backup and device transfer.
 
 Settings > Privacy > "Live traffic only when I tap" keeps a planned route on the open routers
 alone until you tap Show traffic on the route list. Until then Google is not asked.

@@ -86,6 +86,7 @@ internal fun SettingsHub(
             SettingsSection.PLACES to stringResource(R.string.settings_places),
             SettingsSection.NAVIGATION to stringResource(R.string.settings_navigation),
             SettingsSection.VEHICLES to stringResource(R.string.settings_vehicles),
+            SettingsSection.AI to stringResource(R.string.settings_ai),
             SettingsSection.VOICE to stringResource(R.string.settings_voice),
             SettingsSection.SEARCH to stringResource(R.string.settings_search),
             SettingsSection.OFFLINE to stringResource(R.string.settings_offline),
@@ -172,6 +173,13 @@ internal fun SettingsHub(
             subtitle = stringResource(R.string.settings_hub_vehicles_sub),
             modifier = rowModifier(SettingsSection.VEHICLES, first = false),
             onClick = { onOpen(SettingsSection.VEHICLES, null) },
+        )
+        HubRow(
+            icon = SymOutlined.Settings,
+            title = stringResource(R.string.settings_ai),
+            subtitle = stringResource(R.string.settings_hub_ai_sub),
+            modifier = rowModifier(SettingsSection.AI, first = false),
+            onClick = { onOpen(SettingsSection.AI, null) },
         )
         HubRow(
             icon = SymOutlined.VolumeUp,
@@ -401,6 +409,13 @@ private val SEARCH_INDEX: List<Pair<Int, SettingsSection>> = listOf(
     R.string.settings_vehicle_dimensions to SettingsSection.VEHICLES,
     R.string.settings_vehicle_consumption to SettingsSection.VEHICLES,
     R.string.settings_vehicle_routing to SettingsSection.VEHICLES,
+    // AI
+    R.string.settings_ai to SettingsSection.AI,
+    R.string.settings_ai_provider to SettingsSection.AI,
+    R.string.settings_ai_model to SettingsSection.AI,
+    R.string.settings_ai_key to SettingsSection.AI,
+    R.string.settings_vehicle_add_ai to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_ai_search to SettingsSection.VEHICLES,
     // Voice
     R.string.settings_spoken_directions to SettingsSection.VOICE,
     R.string.settings_spoken_road_names to SettingsSection.VOICE,

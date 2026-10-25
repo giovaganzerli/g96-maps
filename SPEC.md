@@ -3579,31 +3579,97 @@ prices under the Open Government Licence v3.0.
 
 ### 5.9 Vehicle garage
 
-- `VehicleProfile` (`core/model/Vehicle.kt`) is one local garage entry: id, nickname, kind
-  (`CAR`, `VAN`, `CAMPER`, `TRUCK`, `OTHER`), make, model, year, fuel type (`PETROL`, `DIESEL`,
-  `LPG`, `CNG`, `HYBRID`, `PLUG_IN_HYBRID`, `ELECTRIC`, `HYDROGEN`, `OTHER`), plate, routing mode
-  (`AUTO`, `TRUCK`), height, width, width with mirrors, length, weight, gross weight, maximum
-  axle load, axle count, fuel consumption, electric consumption, battery size, tank size and
-  notes. Every field except `id` is defaulted so an older payload decodes. The display name is
-  the nickname, else make and model, else "Vehicle".
+- `VehicleProfile` (`core/model/Vehicle.kt`) is one local garage entry: id, retired nickname,
+  kind (`CAR`, `VAN`, `CAMPER`, `TRUCK`, `OTHER`), make, model, variant, year, fuel type
+  (`PETROL`, `DIESEL`, `LPG`, `CNG`, `HYBRID`, `PLUG_IN_HYBRID`, `ELECTRIC`, `HYDROGEN`,
+  `OTHER`), plate, routing mode (`AUTO`, `TRUCK`), emission standard, engine displacement,
+  power, transmission (`MANUAL`, `AUTOMATIC`, `DCT`, `CVT`, `OTHER`, `UNKNOWN`), drivetrain
+  (`FWD`, `RWD`, `AWD`, `OTHER`, `UNKNOWN`), top speed, height, width, width with mirrors,
+  length, weight, gross weight, maximum axle load, axle count, fuel consumption, electric
+  consumption, consumption cycle (`WLTP`, `NEDC`, `EPA`, `UNKNOWN`), battery size, tank size,
+  maximum charging power, charging connector and notes. Every field except `id` is defaulted so
+  an older payload decodes.
+- `nickname` is retired from the UI and kept only so an older JSON payload decodes. The display
+  name is make and model, then the plate when present (`Fiat Panda · AB123CD`), else "Vehicle".
 - `VehicleStore` is a singleton. It keeps the list as JSON under key `vehicles` in the
   `vela_vehicles` preference file and the active id under `active_vehicle_id` in the same file.
   The JSON sets `ignoreUnknownKeys`. Invalid JSON reads as an empty garage.
 - The first saved vehicle becomes active. Deleting the active vehicle promotes the first
-  remaining one. An unknown active id falls back to the first vehicle. Saves trim the nickname,
-  make, model, plate and notes, keep the original creation time on an update and move the entry
-  to the front.
+  remaining one. An unknown active id falls back to the first vehicle. Saves trim make, model,
+  variant, plate, emission standard, charging connector and notes, keep the original creation
+  time on an update and move the entry to the front.
 - `VehiclePrefs.vehicles` and `VehiclePrefs.active` are `StateFlow`s published when the store is
   constructed and after every write. Settings > Vehicles (`SettingsSection.VEHICLES`) is the
   only editor. The route pickers show a vehicle chip in drive mode, and the chip switches the
   active vehicle through the `VehicleActions.setActive` holder, wired by `MapViewModel`. No chip
   is drawn when the garage is empty.
+- Add offers only two choices: **Cerca con IA** and **Inserisci manualmente**. Manual starts the
+  editor with make, model, year, fuel and kind empty. AI starts the search form described in
+  5.10, then a preview, then the same editor with per-field AI badges. Existing vehicles always
+  open the editor directly; AI query is absent and no badge is shown.
+- Make, model, year, fuel and kind are required before Save; kind and fuel stay editable. The
+  editor checks that every numeric field parses. Plate, notes and routing mode are manual-only
+  fields. The AI query is creation-only state and is never part of `VehicleProfile` or its JSON.
+  AI badges are editor-only state and are removed when the field is edited; they are never
+  persisted.
 - The `vela_vehicles` file is intentionally not in the Android backup include lists in
   `backup_rules.xml` and `data_extraction_rules.xml`: a plate and vehicle details stay on the
-  phone.
+  phone. Both XML files also carry an explicit `<exclude>` for `vela_ai.xml`.
 - The garage does not change routing, tolls, fuel prices or search in this phase. The routing
   mode and dimensions are stored for vehicle-aware routing and trip costs; no plate lookup
   provider is used.
+
+### 5.10 Vehicle AI search and AI settings
+
+- Settings > AI (`SettingsSection.AI`, route `settings/ai`) chooses **one** active provider:
+  `OPENAI`, `ANTHROPIC`, `GOOGLE`, `OPENROUTER`. Each has its own API key and editable model id.
+  Tapping a provider only selects it for editing; **Save and use** makes it active.
+  Defaults are `gpt-4.1-mini`, `claude-sonnet-4-5`, `gemini-2.5-flash` and
+  `openai/gpt-4.1-mini`. Vela ships no key, pays for nothing and never tries another provider
+  after a failure.
+- Requests use the providers' native APIs, not one compatibility layer: OpenAI
+  `POST /v1/responses` (Bearer), Anthropic `POST /v1/messages` (`x-api-key`,
+  `anthropic-version: 2023-06-01`), Google
+  `POST /v1beta/models/{model}:generateContent` (`key` query) and OpenRouter
+  `POST /api/v1/chat/completions` (Bearer). "Test key" calls the OpenAI, Anthropic and Google
+  model-list endpoints and the OpenRouter key endpoint; it never spends generation tokens. The AI client has connect 20 s, read 90 s,
+  write 30 s and call 100 s, and is built from the shared OkHttp client so it does not inherit
+  the 12 s map timeout.
+- Keys are stored in the `vela_ai` SharedPreferences file as AES-GCM ciphertext. The AES-256
+  key is generated in the Android Keystore under alias `vela_ai_key` and never leaves it. The
+  file keeps `active_provider`, `model_<provider>` and `key_<provider>`; a blank key keeps the
+  stored one, and the Remove button deletes it. Decryption failure reads as "no key". Models
+  are not secret and are plain text. `vela_ai` is excluded from Android backup and device
+  transfer in both rule files.
+- `VehicleAiCriteria` contains make, model, year and fuel only. It has **no plate field**, so a
+  plate cannot reach a provider through the request type. The free-text AI query is optional and
+  passes through `PlateRedactor` before the prompt: current Italian/EU plates (two letters,
+  three digits, two letters), old Italian plates (two letters, six digits) and one-letter
+  three-digit three-letter formats, with optional space, dot or dash, become
+  `[plate removed]`. The UI warns when a token was removed.
+- The shared schema has exactly these 27 keys, all present in a normalized answer and `null`
+  when unknown: `make`, `model`, `variant`, `year`, `fuelType`, `kind`, `emissionStandard`,
+  `engineDisplacementCc`, `powerKw`, `transmission`, `drivetrain`, `maxSpeedKph`, `lengthM`,
+  `widthM`, `widthWithMirrorsM`, `heightM`, `weightKg`, `grossWeightKg`, `axleLoadKg`,
+  `axleCount`, `tankL`, `batteryKwh`, `consumptionL100km`, `energyKwh100km`,
+  `consumptionStandard`, `maxChargingPowerKw`, `chargingConnector`. Units are cc, kW, km/h,
+  meters, kilograms, liters and kWh per 100 km. `batteryKwh` is usable capacity when known;
+  `axleLoadKg` is the maximum axle load.
+- Enums are the app enums above. The parser accepts common aliases in English and Italian
+  (for example `PHEV`, `metano`, `DSG`, `4x4`), coerces quoted numbers, ignores unknown keys and
+  turns an unknown enum or implausible number into `null`. Derived values are not requested:
+  range or electric range, payload, power-to-weight, acceleration, CO2, cost per km, trip cost,
+  toll class, charging time and ETA. The provider sees only the structured criteria, the
+  redacted free text and this schema.
+- After parsing, `VehicleAiMerge` restores the typed make, model, year and fuel. A non-null
+  different value is reported as a conflict and shown as a warning, but never applied. The
+  remaining fields fill the editor and each one gets an AI badge. A failed search shows the
+  provider error or a connection/format error; there is no fallback.
+- The schema, prompt and parser live in `core/ai/` and are shared by all four adapters, which
+  only build the HTTP envelope and read its native response path. Vehicle creation opens a
+  preview before the editor; the AI query lives only in `VehiclesSettingsScreen` creation state.
+- Old vehicles created by the Phase 1A build stay editable by hand. FleetByte/EEA catalog
+  matching, multi-database merging, plate lookup and truck-aware routing remain later phases.
 
 ---
 

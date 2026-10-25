@@ -118,9 +118,16 @@ What Vela Maps does today, one line per feature. How each one works is in [SPEC.
 
 ## Vehicles
 
-- Settings > Vehicles keeps a local garage: nickname, make, model, year, type, fuel, optional
-  plate, routing mode, dimensions, weights, axles, fuel and electric consumption, battery, tank
-  and notes. Add, edit and delete them; every field stays editable.
+- Settings > Vehicles keeps a local garage: make, model, variant, year, type, fuel, optional
+  plate, routing mode, emission standard, engine, power, transmission, drivetrain, dimensions,
+  weights, axles, consumption and cycle, battery, tank, charging and notes. Add, edit and delete
+  them; every field stays editable.
+- Add offers **Cerca con IA** or **Inserisci manualmente**. AI needs make, model, year and fuel,
+  can take a free-text query, previews the result and opens the editor with an AI badge on each
+  filled field. The AI query and badges are never saved.
+- Settings > AI stores the key and model for one active provider: OpenAI, Anthropic, Google or
+  OpenRouter. Keys are encrypted with the Android Keystore, excluded from backup and transfer,
+  and there is no built-in key or automatic fallback. The plate is never sent to a provider.
 - One vehicle is active, marked with a radio row. The route pickers show it as a chip in drive
   mode, and tapping the chip switches the active vehicle.
 - The garage stays on the phone and is not included in Android backup. It does not change
