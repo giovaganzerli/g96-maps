@@ -113,6 +113,7 @@ nav:
       - The drive's chrome: book/drive-chrome.md
       - Releases: book/releases.md
       - Settings and page motion: book/settings.md
+      - Vehicles: book/vehicles.md
   - Specification: spec.md
   - Project:
       - Roadmap: roadmap.md

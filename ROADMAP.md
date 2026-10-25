@@ -37,6 +37,19 @@ Traffic incidents from official feeds (issue #688; Germany's Autobahn API, Mobil
 Hamburg traffic feed in issue #833) are out of this list. They belong in a sister project beside
 Vela Almanac, which Vela would read as data.
 
+## Vehicle-aware routing and trip costs
+
+Settings > Vehicles stores the active vehicle and its dimensions, weights and consumption. Open:
+
+- Phase 2: send the active vehicle's routing mode and dimensions to Valhalla as `costing: truck`
+  when the profile asks for it, and use the same limits in the offline router. Car routing must
+  stay unchanged when the mode is Automatic.
+- Phase 3: estimate tolls from distance and a rate when no TollGuru key is set, or use the
+  user's own TollGuru key. Show fuel and energy cost from the Italian live feed, with a custom
+  price for the route. Currency is EUR for now.
+- Phase 1B: optional catalog autofill by make, model and year. Manual entry stays available.
+- Plate lookup: no provider is chosen. Keep it optional and user-keyed when one is.
+
 ## Less to Google
 
 The direction for the Google half: keep what only Google has, and send it less. Candidates,

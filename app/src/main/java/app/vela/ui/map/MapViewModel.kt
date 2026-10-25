@@ -21,6 +21,7 @@ import app.vela.core.data.PlaceShortcutStore
 import app.vela.core.data.RecentPlaceStore
 import app.vela.core.data.RecentSearchStore
 import app.vela.core.data.SavedPlaceStore
+import app.vela.core.data.VehicleStore
 import app.vela.core.data.tiles.MapStyle
 import app.vela.core.location.LocationProvider
 import app.vela.core.model.LatLng
@@ -31,6 +32,7 @@ import app.vela.core.model.Route
 import app.vela.core.model.SavedPlace
 import app.vela.core.model.ShortcutKind
 import app.vela.core.model.TravelMode
+import app.vela.core.model.VehicleProfile
 import app.vela.ui.formatDuration
 import app.vela.core.model.bearingTo
 import app.vela.core.model.distanceTo
@@ -477,6 +479,7 @@ class MapViewModel @Inject constructor(
     private val parkingStore: app.vela.core.data.ParkingStore,
     private val listStore: app.vela.core.data.PlaceListStore,
     private val savedRouteStore: app.vela.core.data.SavedRouteStore,
+    private val vehicleStore: VehicleStore,
     private val shortcutStore: PlaceShortcutStore,
     private val calibration: CalibrationStore,
     private val offlinePoiStore: OfflinePoiStore,
@@ -5916,6 +5919,7 @@ class MapViewModel @Inject constructor(
         app.vela.ui.ParkingActions.saveHere = ::saveParkingSpot
         app.vela.ui.ParkingActions.arrivedByCar = { _state.value.travelMode == TravelMode.DRIVE }
         app.vela.ui.ParkingActions.parkedAt = { _state.value.parkedAtMillis }
+        app.vela.ui.VehicleActions.setActive = { id -> vehicleStore.setActive(id) }
     }
     init { app.vela.ui.SavedActions.rename = ::renamePlace; app.vela.ui.ShapeActions.delete = ::deleteOpenedShape; app.vela.ui.ShapeActions.edit = ::editOpenedShape; app.vela.ui.RouteActions.pinTrip = ::pinTripShortcut; app.vela.ui.RouteActions.modeKey = { app.vela.ui.TripShortcut.defaultIcon(_state.value.travelMode) }; app.vela.ui.RouteActions.camerasChanged = { if (_state.value.directionsOpen) route(_state.value.travelMode) } }
 
@@ -6821,6 +6825,12 @@ class MapViewModel @Inject constructor(
 
     fun renameSavedRoute(id: String, name: String) { _state.update { it.copy(savedRoutes = savedRouteStore.rename(id, name)) } }
     fun deleteSavedRoute(id: String) { _state.update { it.copy(savedRoutes = savedRouteStore.delete(id)) } }
+
+    // Garage writes publish through VehiclePrefs, so the route chooser chip updates without a
+    // new MapScreen parameter or a second settings state.
+    fun saveVehicle(vehicle: VehicleProfile) { vehicleStore.save(vehicle) }
+    fun deleteVehicle(id: String) { vehicleStore.delete(id) }
+    fun setActiveVehicle(id: String) { vehicleStore.setActive(id) }
 
     /** Wait (at most [capMs]) for the work that follows a route's arrival: the road features along
      *  it, the camera count and the camera detours. A one-tap Start from the place sheet waits for

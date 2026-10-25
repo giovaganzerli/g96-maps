@@ -4,9 +4,10 @@
   saved routes, Home and Work, search history, recorded trips and your own font. Nothing else.
   Left out on purpose: the Google web session (cookies and WebView storage; a restored copy would
   be the same session on two phones), the last known position and the view the map was left on
-  (both in vela_location), the drive-resume record,
-  diagnostics and crash reports, caches, and downloaded maps and voices (gigabytes that download
-  again). An include list, so a new file is not backed up until it is added here.
+  (both in vela_location), the vehicle garage (vela_vehicles.xml: a plate and vehicle details),
+  the drive-resume record, diagnostics and crash reports, caches, and downloaded maps and voices
+  (gigabytes that download again). An include list, so a new file is not backed up until it is
+  added here.
 -->
 <full-backup-content>
     <include domain="sharedpref" path="vela_settings.xml" />

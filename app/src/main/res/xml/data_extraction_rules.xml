@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The same list as backup_rules.xml (Android 12 and later read this file; keep the two in step). -->
+<!-- The same list as backup_rules.xml (Android 12 and later read this file; keep the two in step).
+     The vehicle garage (vela_vehicles.xml) is left out on purpose: it holds a plate and vehicle
+     details that stay on the phone. -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="sharedpref" path="vela_settings.xml" />

@@ -28,6 +28,7 @@ Every chapter has the same four parts:
 | 11 | [The drive's chrome](11-drive-chrome.md) | The turn banner, street callouts, the road-ahead bar |
 | 12 | [Releases](12-releases.md) | Channels, version codes, the in-app updater |
 | 13 | [Settings and page motion](13-settings.md) | The Settings pages, Back, page transitions, keypad focus |
+| 14 | [Vehicles](14-vehicles.md) | The local garage, the active vehicle, the route-picker chip |
 
 ## Not written yet
 

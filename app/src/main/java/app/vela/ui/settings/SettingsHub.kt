@@ -85,6 +85,7 @@ internal fun SettingsHub(
             SettingsSection.MAP to stringResource(R.string.settings_map),
             SettingsSection.PLACES to stringResource(R.string.settings_places),
             SettingsSection.NAVIGATION to stringResource(R.string.settings_navigation),
+            SettingsSection.VEHICLES to stringResource(R.string.settings_vehicles),
             SettingsSection.VOICE to stringResource(R.string.settings_voice),
             SettingsSection.SEARCH to stringResource(R.string.settings_search),
             SettingsSection.OFFLINE to stringResource(R.string.settings_offline),
@@ -164,6 +165,13 @@ internal fun SettingsHub(
             subtitle = stringResource(R.string.settings_hub_navigation_sub),
             modifier = rowModifier(SettingsSection.NAVIGATION, first = false),
             onClick = { onOpen(SettingsSection.NAVIGATION, null) },
+        )
+        HubRow(
+            icon = SymOutlined.DirectionsCar,
+            title = stringResource(R.string.settings_vehicles),
+            subtitle = stringResource(R.string.settings_hub_vehicles_sub),
+            modifier = rowModifier(SettingsSection.VEHICLES, first = false),
+            onClick = { onOpen(SettingsSection.VEHICLES, null) },
         )
         HubRow(
             icon = SymOutlined.VolumeUp,
@@ -382,6 +390,17 @@ private val SEARCH_INDEX: List<Pair<Int, SettingsSection>> = listOf(
     R.string.settings_sim_location to SettingsSection.DIAGNOSTICS,
     R.string.settings_parking_history to SettingsSection.SAVED_PLACES,
     R.string.settings_saved_routes to SettingsSection.SAVED_PLACES,
+    // Vehicles
+    R.string.settings_vehicles to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_active to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_add to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_make to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_model to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_year to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_plate to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_dimensions to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_consumption to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_routing to SettingsSection.VEHICLES,
     // Voice
     R.string.settings_spoken_directions to SettingsSection.VOICE,
     R.string.settings_spoken_road_names to SettingsSection.VOICE,

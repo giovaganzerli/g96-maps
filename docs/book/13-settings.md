@@ -2,7 +2,7 @@
 
 ## What you see
 
-Settings opens over the map as a list of twelve pages with a search field above it.
+Settings opens over the map as a list of thirteen pages with a search field above it.
 
 - Appearance: theme, font, interface size, map look (the Vela look on Liberty, or OpenFreeMap's
   Bright, Positron, Fiord or Black as served), map colors, map buttons (round or square), units,
@@ -13,6 +13,8 @@ Settings opens over the map as a list of twelve pages with a search field above 
 - Places: "Place icons on the map", which places the map draws, what a place page loads.
 - Navigation: route picker, road-ahead bar, arrow, speed limit, road numbers first, zoom keys,
   cameras ([chapter 3](03-cameras.md)), traffic rechecks.
+- Vehicles: the local garage, dimensions, weights, consumption and the active vehicle
+  ([chapter 14](14-vehicles.md)).
 - Voice: spoken directions, street names, the voice library, speed and volume.
 - Search: voice search, on-device speech engines, contact search, and Quick search buttons,
   a page of its own under Search for which category chips show and in what order.

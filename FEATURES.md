@@ -116,6 +116,16 @@ What Vela Maps does today, one line per feature. How each one works is in [SPEC.
 - A warning when the destination or a stop closes around your arrival.
 - "Live traffic only when I tap" plans on the open router until you tap Show traffic.
 
+## Vehicles
+
+- Settings > Vehicles keeps a local garage: nickname, make, model, year, type, fuel, optional
+  plate, routing mode, dimensions, weights, axles, fuel and electric consumption, battery, tank
+  and notes. Add, edit and delete them; every field stays editable.
+- One vehicle is active, marked with a radio row. The route pickers show it as a chip in drive
+  mode, and tapping the chip switches the active vehicle.
+- The garage stays on the phone and is not included in Android backup. It does not change
+  routing or costs yet.
+
 ## Navigation
 
 - A turn banner with arrow, distance, road name, highway shields, exit numbers and lanes. Swipe it

@@ -2,6 +2,7 @@ package app.vela.ui.place
 
 import app.vela.ui.icons.Sym
 import app.vela.ui.icons.SymOutlined
+import app.vela.ui.vehicle.VehicleChip
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -464,6 +465,9 @@ fun GoogleStyleDirectionsPanel(
                                 DepartTimeChooser(route, dim, isTransit = false, onTimeSelected = onTimeSelected)
                             }
                             if (currentMode == TravelMode.DRIVE) {
+                                VehicleChip(
+                                    Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 2.dp),
+                                )
                                 Row(
                                     Modifier.horizontalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),

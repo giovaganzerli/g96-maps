@@ -6,6 +6,11 @@
 # persisted nav state.
 -keepnames class app.vela.core.model.** { *; }
 
+# MapScreen is at the 64 KB method and ART verifier limits. R8 rewriting its
+# generated Compose method produced a VerifyError on a Pixel 6a (2026-10-25);
+# keep the class unoptimized so the release APK still starts.
+-keep class app.vela.ui.map.MapScreenKt { *; }
+
 # sherpa-onnx neural-TTS runtime (vendored AAR). Its JNI resolves the Kotlin config classes AND
 # their fields by their ORIGINAL fully-qualified names (FindClass / GetFieldID) at OfflineTts init.
 # R8 renaming/stripping them makes the native side throw ClassNotFoundError and SIGABRT the process

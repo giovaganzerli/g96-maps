@@ -28,6 +28,7 @@ import app.vela.ui.settings.sections.PlacesSettingsScreen
 import app.vela.ui.settings.sections.QuickChipsSettingsScreen
 import app.vela.ui.settings.sections.SavedPlacesSettingsScreen
 import app.vela.ui.settings.sections.SearchSettingsScreen
+import app.vela.ui.settings.sections.VehiclesSettingsScreen
 import app.vela.ui.settings.sections.VoiceSettingsScreen
 
 // A page preview must not steal keypad focus from the page the user is leaving.
@@ -104,6 +105,7 @@ fun SettingsScreen(vm: MapViewModel, navController: androidx.navigation.NavHostC
                         SettingsSection.MAP -> MapSettingsScreen(onBack = toHub, homeSet = state.home != null)
                         SettingsSection.PLACES -> PlacesSettingsScreen(onBack = toHub)
                         SettingsSection.NAVIGATION -> NavigationSettingsScreen(vm, onBack = toHub)
+                        SettingsSection.VEHICLES -> VehiclesSettingsScreen(vm, onBack = toHub)
                         SettingsSection.VOICE -> VoiceSettingsScreen(vm, onBack = toHub, openLibrary = openVoiceLibrary)
                         // Quick search buttons is a page under Search: pushed on top of it, so Back
                         // returns to Search, the one stack deeper than map, hub, page.

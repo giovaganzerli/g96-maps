@@ -2,6 +2,7 @@ package app.vela.ui.place
 
 import app.vela.ui.icons.Sym
 import app.vela.ui.icons.SymOutlined
+import app.vela.ui.vehicle.VehicleChip
 
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.ui.layout.positionInWindow
@@ -1899,6 +1900,7 @@ fun DirectionsPanel(
             // route falls back to normal rather than failing (the public OSRM can't exclude).
             if (currentMode == TravelMode.DRIVE) {
                 Spacer(Modifier.height(10.dp))
+                VehicleChip(Modifier.padding(end = 12.dp, bottom = 6.dp))
                 Row(
                     Modifier.horizontalScroll(rememberScrollState()).padding(end = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

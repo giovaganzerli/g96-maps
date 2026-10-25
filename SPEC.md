@@ -3577,6 +3577,34 @@ prices under the Open Government Licence v3.0.
   price does not frame the results again.
 - A place is filled once. A newer file reaches the next search or tap.
 
+### 5.9 Vehicle garage
+
+- `VehicleProfile` (`core/model/Vehicle.kt`) is one local garage entry: id, nickname, kind
+  (`CAR`, `VAN`, `CAMPER`, `TRUCK`, `OTHER`), make, model, year, fuel type (`PETROL`, `DIESEL`,
+  `LPG`, `CNG`, `HYBRID`, `PLUG_IN_HYBRID`, `ELECTRIC`, `HYDROGEN`, `OTHER`), plate, routing mode
+  (`AUTO`, `TRUCK`), height, width, width with mirrors, length, weight, gross weight, maximum
+  axle load, axle count, fuel consumption, electric consumption, battery size, tank size and
+  notes. Every field except `id` is defaulted so an older payload decodes. The display name is
+  the nickname, else make and model, else "Vehicle".
+- `VehicleStore` is a singleton. It keeps the list as JSON under key `vehicles` in the
+  `vela_vehicles` preference file and the active id under `active_vehicle_id` in the same file.
+  The JSON sets `ignoreUnknownKeys`. Invalid JSON reads as an empty garage.
+- The first saved vehicle becomes active. Deleting the active vehicle promotes the first
+  remaining one. An unknown active id falls back to the first vehicle. Saves trim the nickname,
+  make, model, plate and notes, keep the original creation time on an update and move the entry
+  to the front.
+- `VehiclePrefs.vehicles` and `VehiclePrefs.active` are `StateFlow`s published when the store is
+  constructed and after every write. Settings > Vehicles (`SettingsSection.VEHICLES`) is the
+  only editor. The route pickers show a vehicle chip in drive mode, and the chip switches the
+  active vehicle through the `VehicleActions.setActive` holder, wired by `MapViewModel`. No chip
+  is drawn when the garage is empty.
+- The `vela_vehicles` file is intentionally not in the Android backup include lists in
+  `backup_rules.xml` and `data_extraction_rules.xml`: a plate and vehicle details stay on the
+  phone.
+- The garage does not change routing, tolls, fuel prices or search in this phase. The routing
+  mode and dimensions are stored for vehicle-aware routing and trip costs; no plate lookup
+  provider is used.
+
 ---
 
 ## 6. Map rendering
