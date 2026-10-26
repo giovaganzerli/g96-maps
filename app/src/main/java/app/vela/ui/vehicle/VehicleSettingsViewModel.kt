@@ -2,12 +2,14 @@ package app.vela.ui.vehicle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.vela.core.ai.AiConsumptionOutcome
 import app.vela.core.ai.AiProvider
 import app.vela.core.ai.AiSearchOutcome
 import app.vela.core.ai.AiVerifyOutcome
 import app.vela.core.ai.VehicleAiAnswer
 import app.vela.core.ai.VehicleAiCriteria
 import app.vela.core.ai.VehicleAiService
+import app.vela.core.ai.VehicleConsumptionInput
 import app.vela.core.data.VehiclePrefs
 import app.vela.core.data.VehicleStore
 import app.vela.core.model.VehicleProfile
@@ -108,6 +110,13 @@ class VehicleSettingsViewModel @Inject constructor(
         searchJob = null
         _search.value = VehicleAiSearchState.Idle
     }
+
+    /**
+     * The editor owns the loading and error state for this one-shot recalculation. The view model
+     * only moves it off the main thread so the provider call can be canceled with the editor.
+     */
+    suspend fun recalculateConsumption(input: VehicleConsumptionInput): AiConsumptionOutcome =
+        withContext(Dispatchers.IO) { ai.recalculateConsumption(input) }
 
     /**
      * A blank [apiKey] keeps the stored key; use [clearKey] to remove it. The model is saved even

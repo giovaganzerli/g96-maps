@@ -9,7 +9,8 @@ Edit and Delete. Delete asks first.
 **Aggiungi veicolo** opens the AI search directly when the active AI provider has a saved key.
 If it does not, the manual editor opens instead. When AI is configured, the AI form still has a
 secondary **Inserisci manualmente** action, so the manual path is always reachable. Existing
-vehicles always open the editor directly; they never show the AI form or AI badges.
+vehicles always open the editor directly; they never show the AI form and start with no AI
+badge. A weight recalculation can add consumption badges later.
 
 The editor is split into these sections:
 
@@ -43,15 +44,24 @@ Fuel-dependent fields appear only when they apply:
 Changing fuel clears every value and AI badge that no longer applies. If AI returned a diesel
 tank and the user switches to electric, the tank is removed before the editor is shown.
 
+The weight field has **Ricalcola i consumi con IA**. It is enabled once make, model, year, fuel,
+type and weight are valid. It sends the main vehicle data, the current fuel and electric
+figures, the weight those figures refer to, and the new weight to the active provider. The
+answer adjusts them for the new weight and fills only the figures that apply to the selected
+fuel. Every updated field gets the same transient AI badge as a search result; a null figure
+leaves the old value alone. If any input changes while the request is running, the answer is
+discarded and the editor asks for another recalculation. A successful recalculation makes the
+new weight the reference for the next change. There is no local formula and no second provider.
+
 Older fields kept in `VehicleProfile` for JSON compatibility but no longer shown are routing
 mode, width with mirrors, gross weight, axle load, axle count, consumption cycle, maximum
 charging power, charging connector and notes. They still decode and are written back from an
 old entry, but they are not part of the new editor.
 
 AI badges are per field and live only in the editor. Changing that field removes its badge. A
-version/trim typed by the user is not marked as AI even when AI repeats it. The badges and the
-search form are never written to `VehicleProfile`; the chosen version/trim becomes the normal
-`variant` field and is saved with the vehicle.
+version/trim typed by the user is not marked as AI even when AI repeats it. The badges, the
+search form and the recalculation state are never written to `VehicleProfile`; the chosen
+version/trim becomes the normal `variant` field and is saved with the vehicle.
 
 In the route picker, drive mode shows a chip with the active vehicle's name. Tapping it lists
 the garage and switches the active vehicle. The chip is absent while the garage is empty. It
@@ -112,6 +122,17 @@ capacity when known. The parser accepts quoted numbers and common English/Italia
 (`PHEV`, `metano`, `DSG`, `4x4`), ignores unknown keys, and turns an unknown enum, a blank string
 or an implausible number into `null`.
 
+The weight recalculation uses a separate schema with only the eight consumption figures:
+`consumptionL100km`, `consumptionUrbanL100km`, `consumptionExtraUrbanL100km`,
+`consumptionMotorwayL100km`, `energyKwh100km`, `energyUrbanKwh100km`,
+`energyExtraUrbanKwh100km` and `energyMotorwayKwh100km`. Its request type,
+`VehicleConsumptionInput`, carries the main vehicle data, the current figures, the reference
+weight and the new weight. It has no plate, notes or average-speed fields, and the variant is
+redacted before it reaches the provider. The prompt asks for the current figures to be adjusted
+to the new weight, keeping the cycle and conditions, and estimates a figure only when the
+reference data is missing. The parser accepts the same wrapping and quoted numbers as the search
+parser. An answer with no usable figure is a distinct empty-answer error.
+
 Average driver speeds and trip averages are deliberately absent: those are behaviour, not
 manufacturer data. They are manual-only fields in the editor. Other derived values are also
 excluded: range and electric range, payload, power-to-weight, acceleration, CO2, cost per
@@ -122,8 +143,9 @@ has no plate field, so the plate cannot reach a provider through the request typ
 answer, `VehicleAiMerge` restores the typed make, model, year, fuel and typed variant. If the
 provider returned a different identity value, the field is listed in a conflict warning but the
 typed value is kept. The result opens a preview; **Apri nell'editor** opens the normal editor
-with the AI badges. A failed request shows the provider's error, a connection error or a format
-error; there is no fallback to another provider.
+with the AI badges. The weight recalculation fills the editor in place, without a preview. A
+failed request shows the provider's error, a connection error or a format error; an empty answer
+has its own message. There is no fallback to another provider.
 
 The prompt, schema and parser are shared in `core/ai/`; the four adapters only build the HTTP
 envelope and read the native response path. The AI HTTP client has connect 20 s, read 90 s,
@@ -168,6 +190,7 @@ search.
 
 - The AI data is only as good as the model's answer. Every field stays editable, and the editor
   does not check that a height, weight or consumption figure is plausible for the vehicle type.
+  A recalculated consumption figure is an estimate, not a measured value.
 - The model id is a free-text field; a provider can retire one and the error appears as a failed
   request.
 - No FleetByte or EEA CO2 catalog, no multi-database merge, no plate lookup, and no ChatGPT

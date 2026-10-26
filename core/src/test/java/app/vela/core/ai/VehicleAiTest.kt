@@ -267,7 +267,7 @@ class AiProviderRequestsTest {
 
     @Test
     fun `each provider gets its native request`() {
-        val openAi = AiProviderRequests.search(AiProvider.OPENAI, "gpt-test", "sk-openai", system, user)
+        val openAi = AiProviderRequests.generate(AiProvider.OPENAI, "gpt-test", "sk-openai", system, user)
         assertEquals("https", openAi.url.scheme)
         assertEquals("api.openai.com", openAi.url.host)
         assertEquals("/v1/responses", openAi.url.encodedPath)
@@ -276,20 +276,20 @@ class AiProviderRequestsTest {
         assertTrue(openAi.body.contains("gpt-test"))
         assertTrue(openAi.body.contains("system prompt"))
 
-        val anthropic = AiProviderRequests.search(AiProvider.ANTHROPIC, "claude-test", "sk-ant", system, user)
+        val anthropic = AiProviderRequests.generate(AiProvider.ANTHROPIC, "claude-test", "sk-ant", system, user)
         assertEquals("api.anthropic.com", anthropic.url.host)
         assertEquals("/v1/messages", anthropic.url.encodedPath)
         assertEquals("sk-ant", anthropic.headers["x-api-key"])
         assertEquals("2023-06-01", anthropic.headers["anthropic-version"])
         assertTrue(anthropic.body!!.contains("\"system\""))
 
-        val google = AiProviderRequests.search(AiProvider.GOOGLE, "gemini-test", "goog-key", system, user)
+        val google = AiProviderRequests.generate(AiProvider.GOOGLE, "gemini-test", "goog-key", system, user)
         assertEquals("generativelanguage.googleapis.com", google.url.host)
         assertEquals("goog-key", google.url.queryParameter("key"))
         assertTrue(google.url.encodedPath.endsWith("gemini-test:generateContent"))
         assertTrue(google.body!!.contains("\"responseMimeType\""))
 
-        val router = AiProviderRequests.search(AiProvider.OPENROUTER, "openai/gpt-test", "sk-or", system, user)
+        val router = AiProviderRequests.generate(AiProvider.OPENROUTER, "openai/gpt-test", "sk-or", system, user)
         assertEquals("openrouter.ai", router.url.host)
         assertEquals("/api/v1/chat/completions", router.url.encodedPath)
         assertEquals("Bearer sk-or", router.headers["Authorization"])
@@ -299,7 +299,7 @@ class AiProviderRequestsTest {
     @Test
     fun `the request body has no plate field`() {
         AiProvider.values().forEach { provider ->
-            val body = AiProviderRequests.search(provider, "model", "key", system, user).body!!
+            val body = AiProviderRequests.generate(provider, "model", "key", system, user).body!!
             assertFalse(body.contains("plate", ignoreCase = true))
         }
     }

@@ -3,6 +3,8 @@ package app.vela.ui.vehicle
 import app.vela.core.ai.VehicleAiCriteria
 import app.vela.core.ai.VehicleAiField
 import app.vela.core.ai.VehicleAiPayload
+import app.vela.core.ai.VehicleConsumptionInput
+import app.vela.core.ai.VehicleConsumptionPayload
 import app.vela.core.model.ConsumptionStandard
 import app.vela.core.model.Drivetrain
 import app.vela.core.model.FuelType
@@ -151,6 +153,88 @@ internal data class VehicleDraft(
             year = year,
             fuelType = fuel,
             variant = variant.trim(),
+        )
+    }
+
+    /**
+     * The data sent when the user asks AI to recalculate consumption. [referenceWeightKg] is the
+     * weight the current figures refer to, so the provider can adjust them to the new [weightKg].
+     * Fuel-incompatible data is omitted, and no plate, notes or average-speed field is present.
+     */
+    fun consumptionInput(referenceWeightKg: Int? = null): VehicleConsumptionInput? {
+        val year = yearValue ?: return null
+        val fuel = fuelType ?: return null
+        val kind = kind ?: return null
+        val weight = parseInt(weightKg)?.takeIf { it in 1..100_000 } ?: return null
+        return VehicleConsumptionInput(
+            make = make.trim(),
+            model = model.trim(),
+            year = year,
+            kind = kind,
+            fuelType = fuel,
+            weightKg = weight,
+            variant = variant.trim(),
+            emissionStandard = if (fuel.usesEmissionStandard()) {
+                emissionStandard.trim().takeIf { it.isNotBlank() }
+            } else {
+                null
+            },
+            engineDisplacementCc = if (fuel.usesEngineDisplacement()) {
+                parseInt(engineDisplacementCc)
+            } else {
+                null
+            },
+            powerKw = parseInt(powerKw),
+            transmission = transmission.takeIf { it != Transmission.UNKNOWN },
+            drivetrain = drivetrain.takeIf { it != Drivetrain.UNKNOWN },
+            maxSpeedKph = parseInt(maxSpeedKph),
+            lengthM = parseDouble(lengthM),
+            widthM = parseDouble(widthM),
+            heightM = parseDouble(heightM),
+            referenceWeightKg = referenceWeightKg?.takeIf { it in 1..100_000 },
+            tankL = if (fuel.usesTank()) parseDouble(tankL) else null,
+            batteryKwh = if (fuel.usesBattery()) parseDouble(batteryKwh) else null,
+            consumptionStandard = consumptionStandard,
+            currentConsumptionL100km = if (fuel.usesFuelConsumption()) {
+                parseDouble(consumptionL100km)
+            } else {
+                null
+            },
+            currentConsumptionUrbanL100km = if (fuel.usesFuelConsumption()) {
+                parseDouble(consumptionUrbanL100km)
+            } else {
+                null
+            },
+            currentConsumptionExtraUrbanL100km = if (fuel.usesFuelConsumption()) {
+                parseDouble(consumptionExtraUrbanL100km)
+            } else {
+                null
+            },
+            currentConsumptionMotorwayL100km = if (fuel.usesFuelConsumption()) {
+                parseDouble(consumptionMotorwayL100km)
+            } else {
+                null
+            },
+            currentEnergyKwh100km = if (fuel.usesElectricConsumption()) {
+                parseDouble(energyKwh100km)
+            } else {
+                null
+            },
+            currentEnergyUrbanKwh100km = if (fuel.usesElectricConsumption()) {
+                parseDouble(energyUrbanKwh100km)
+            } else {
+                null
+            },
+            currentEnergyExtraUrbanKwh100km = if (fuel.usesElectricConsumption()) {
+                parseDouble(energyExtraUrbanKwh100km)
+            } else {
+                null
+            },
+            currentEnergyMotorwayKwh100km = if (fuel.usesElectricConsumption()) {
+                parseDouble(energyMotorwayKwh100km)
+            } else {
+                null
+            },
         )
     }
 
@@ -381,6 +465,60 @@ internal fun parseInt(raw: String): Int? =
 /** Editing a field removes only that field's AI badge; a null field keeps the set. */
 internal fun badgesAfterEdit(badges: Set<VehicleAiField>, field: VehicleAiField?): Set<VehicleAiField> =
     if (field == null) badges else badges - field
+
+/** A recalculated draft and the consumption fields the provider filled. */
+internal data class ConsumptionUpdate(
+    val draft: VehicleDraft,
+    val badges: Set<VehicleAiField>,
+)
+
+/**
+ * Applies only the figures that apply to the selected fuel. A null answer leaves the existing
+ * value and its badge alone, and every applied field is marked as AI-filled for this editor.
+ */
+internal fun VehicleDraft.withRecalculatedConsumption(
+    payload: VehicleConsumptionPayload,
+): ConsumptionUpdate {
+    var updated = this
+    val badges = linkedSetOf<VehicleAiField>()
+    if (fuelType.usesFuelConsumption()) {
+        payload.consumptionL100km?.let {
+            updated = updated.copy(consumptionL100km = formatNumber(it))
+            badges += VehicleAiField.CONSUMPTION_L100KM
+        }
+        payload.consumptionUrbanL100km?.let {
+            updated = updated.copy(consumptionUrbanL100km = formatNumber(it))
+            badges += VehicleAiField.CONSUMPTION_URBAN_L100KM
+        }
+        payload.consumptionExtraUrbanL100km?.let {
+            updated = updated.copy(consumptionExtraUrbanL100km = formatNumber(it))
+            badges += VehicleAiField.CONSUMPTION_EXTRA_URBAN_L100KM
+        }
+        payload.consumptionMotorwayL100km?.let {
+            updated = updated.copy(consumptionMotorwayL100km = formatNumber(it))
+            badges += VehicleAiField.CONSUMPTION_MOTORWAY_L100KM
+        }
+    }
+    if (fuelType.usesElectricConsumption()) {
+        payload.energyKwh100km?.let {
+            updated = updated.copy(energyKwh100km = formatNumber(it))
+            badges += VehicleAiField.ENERGY_KWH100KM
+        }
+        payload.energyUrbanKwh100km?.let {
+            updated = updated.copy(energyUrbanKwh100km = formatNumber(it))
+            badges += VehicleAiField.ENERGY_URBAN_KWH100KM
+        }
+        payload.energyExtraUrbanKwh100km?.let {
+            updated = updated.copy(energyExtraUrbanKwh100km = formatNumber(it))
+            badges += VehicleAiField.ENERGY_EXTRA_URBAN_KWH100KM
+        }
+        payload.energyMotorwayKwh100km?.let {
+            updated = updated.copy(energyMotorwayKwh100km = formatNumber(it))
+            badges += VehicleAiField.ENERGY_MOTORWAY_KWH100KM
+        }
+    }
+    return ConsumptionUpdate(updated, badges)
+}
 
 /**
  * Keeps only the badges whose field still has a value. Fuel changes can drop an AI value before

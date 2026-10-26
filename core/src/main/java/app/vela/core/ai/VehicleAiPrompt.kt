@@ -1,9 +1,9 @@
 package app.vela.core.ai
 
 /**
- * The one prompt every provider receives. The structured identity is a hard constraint; the
- * version/trim text only refines variant, engine and equipment. Derived values and driver
- * behaviour are explicitly excluded.
+ * The vehicle-search prompt every provider receives. The structured identity is a hard
+ * constraint; the version/trim text only refines variant, engine and equipment. Derived values
+ * and driver behavior are explicitly excluded.
  */
 object VehicleAiPrompt {
     val system: String = """

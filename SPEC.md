@@ -3610,13 +3610,15 @@ prices under the Open Government Licence v3.0.
 - **Aggiungi veicolo** opens the AI search directly when the active provider has a saved key.
   Otherwise it opens the manual editor. The AI form also keeps a secondary **Inserisci
   manualmente** action, so manual creation stays reachable when AI is configured. Existing
-  vehicles always open the editor directly; no AI text or badge is shown for them.
+  vehicles always open the editor directly; no AI badge is shown when it opens, though a weight
+  recalculation can add consumption badges.
 - The editor is split into **Identità**, **Motore e trasmissione**, **Dimensioni e pesi**,
   **Energia e consumi** and **Velocità**. Identity has plate, make, model, version/trim, year and
   the three vehicle types. Engine/transmission has displacement, power, fuel, emission class,
   gearbox (manual, automatic, not specified) and drivetrain (front, rear, all, not specified).
   Dimensions are length, width, height and weight. Energy shows tank and/or battery plus the
-  four fuel and four electric consumption fields. Speed shows the four average speeds and top
+  four fuel and four electric consumption fields; the fuel figures sit directly in the group,
+  with no separate fuel-consumption subheading. Speed shows the four average speeds and top
   speed. The old **Percorso** section and its subitems are gone.
 - Make, model, year, fuel and kind are required. The editor checks that every numeric field
   parses. Emission class is chosen from a comprehensive fixed list (Euro 0-7, including 5a, 5b,
@@ -3626,6 +3628,14 @@ prices under the Open Government Licence v3.0.
   emission class and fuel-consumption fields; diesel/petrol/LPG/CNG hide the battery and electric
   consumption; hybrid shows tank, battery and fuel consumption; plug-in hybrid shows both fuel
   and electric consumption. Changing fuel clears the values and badges that no longer apply.
+- Under **Peso**, **Ricalcola i consumi con IA** is enabled when the identity, fuel and a valid
+  weight are present. It sends the main vehicle data, the current consumption figures, the weight
+  those figures refer to and the new weight to the one active provider. The current figures are
+  the reference; the answer adjusts them for the new weight and fills only the fuel or electric
+  figures that apply. Each updated field gets an AI badge. A null answer leaves the existing
+  value alone. An answer is discarded when any input changes while the request is running, and
+  a successful answer makes the new weight the reference for the next recalculation. There is
+  no local formula and no provider fallback.
 - The `vela_vehicles` file is intentionally not in the Android backup include lists in
   `backup_rules.xml` and `data_extraction_rules.xml`: a plate and vehicle details stay on the
   phone. Both XML files also carry an explicit `<exclude>` for `vela_ai.xml`.
@@ -3689,6 +3699,23 @@ prices under the Open Government Licence v3.0.
   each one gets an AI badge. Fields that do not apply to the selected fuel are dropped before
   the editor. A failed search shows the provider error or a connection/format error; there is no
   fallback.
+- `VehicleConsumptionInput` is the separate request type for a weight recalculation. It contains
+  make, model, variant, year, kind, fuel, emission standard, displacement, power, transmission,
+  drivetrain, top speed, length, width, height, tank or battery capacity, consumption standard,
+  the current eight figures, and both the reference weight and the new weight. It has no plate,
+  notes or average-speed field. The variant is redacted with `PlateRedactor` before the prompt,
+  like the search variant.
+- The recalculation uses a consumption-only schema with exactly these 8 keys, all present and
+  `null` when unknown: `consumptionL100km`, `consumptionUrbanL100km`,
+  `consumptionExtraUrbanL100km`, `consumptionMotorwayL100km`, `energyKwh100km`,
+  `energyUrbanKwh100km`, `energyExtraUrbanKwh100km`, `energyMotorwayKwh100km`. The prompt asks
+  the model to adjust the current figures from `referenceWeightKg` to the new weight, keep the
+  same cycle and conditions, and estimate a missing figure from the vehicle data. It excludes
+  every other vehicle field. The parser accepts fenced or nested JSON and quoted numbers, and
+  turns an implausible figure into null. A successful answer with no usable figure is reported
+  as an empty answer, separately from a format or provider error. The result updates only the
+  fields that apply to the selected fuel, and each updated field gets the same transient AI
+  badge as a search result.
 - The schema, prompt and parser live in `core/ai/` and are shared by all four adapters, which
   only build the HTTP envelope and read its native response path. Vehicle creation opens a
   preview before the editor; the chosen version/trim becomes the vehicle's `variant` and is

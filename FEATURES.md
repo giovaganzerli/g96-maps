@@ -127,6 +127,9 @@ What Vela Maps does today, one line per feature. How each one works is in [SPEC.
   consumption, electric hides tank and fuel consumption, and hybrid/plug-in hybrid combine the
   fields that apply. Changing fuel clears the values and AI badges that no longer apply. The
   old Percorso section is gone.
+- **Ricalcola i consumi con IA** under the weight asks the active provider to adjust the current
+  consumption figures to the new weight, using the vehicle's main data. Updated fields carry AI
+  badges. The plate is never sent, and there is no local formula or provider fallback.
 - **Aggiungi veicolo** opens AI search directly when the active provider has a saved key;
   otherwise it opens the manual editor. The AI form also has **Inserisci manualmente**, so manual
   creation stays reachable. AI needs make, model, year and fuel; version/trim is optional and

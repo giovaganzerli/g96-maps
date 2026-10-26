@@ -109,6 +109,7 @@ internal fun VehiclesSettingsScreen(
                 page = VehiclePage.Garage
                 if (target.isNew) vm.resetSearch()
             },
+            onRecalculateConsumption = vm::recalculateConsumption,
         )
         return
     }

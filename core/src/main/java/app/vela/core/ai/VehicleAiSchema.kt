@@ -170,9 +170,9 @@ data class VehicleAiPayload(
 }
 
 /**
- * The one schema shared by every provider. It asks for primary data only. Range, payload,
- * acceleration, CO2, costs, toll class, charging time and average driver speeds are derived or
- * behaviour, and stay out.
+ * The vehicle-search schema shared by every provider. It asks for primary data only. Range,
+ * payload, acceleration, CO2, costs, toll class, charging time and average driver speeds are
+ * derived or behavior, and stay out.
  */
 object VehicleAiSchema {
     val keys: List<String> = VehicleAiField.entries.map { it.key }

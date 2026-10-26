@@ -23,6 +23,20 @@ sealed interface AiSearchOutcome {
     data class InvalidResponse(val provider: AiProvider) : AiSearchOutcome
 }
 
+sealed interface AiConsumptionOutcome {
+    data class Success(
+        val provider: AiProvider,
+        val consumption: VehicleConsumptionPayload,
+        val redactedPlateCount: Int,
+    ) : AiConsumptionOutcome
+    data object NoProvider : AiConsumptionOutcome
+    data class MissingKey(val provider: AiProvider) : AiConsumptionOutcome
+    data class HttpError(val provider: AiProvider, val status: Int, val message: String?) : AiConsumptionOutcome
+    data class NetworkError(val provider: AiProvider, val message: String?) : AiConsumptionOutcome
+    data class InvalidResponse(val provider: AiProvider) : AiConsumptionOutcome
+    data class NoValues(val provider: AiProvider) : AiConsumptionOutcome
+}
+
 sealed interface AiVerifyOutcome {
     data class Verified(val provider: AiProvider) : AiVerifyOutcome
     data class MissingKey(val provider: AiProvider) : AiVerifyOutcome
@@ -65,7 +79,7 @@ class VehicleAiService @Inject constructor(
         val config = snapshot.config(provider)
         val redaction = PlateRedactor.redact(criteria.variant)
         val safeCriteria = criteria.copy(variant = redaction.text.trim())
-        val request = AiProviderRequests.search(
+        val request = AiProviderRequests.generate(
             provider = provider,
             model = config.model,
             apiKey = apiKey,
@@ -93,6 +107,53 @@ class VehicleAiService @Inject constructor(
                 }
             }
             is HttpCall.Failure -> AiSearchOutcome.NetworkError(provider, result.message)
+        }
+    }
+
+    /**
+     * Recalculates the consumption figures for one weight against the one active provider. The
+     * request carries the vehicle's main data and the current figures as the reference; it never
+     * carries the plate. A failure is reported, never silently retried on another provider.
+     */
+    suspend fun recalculateConsumption(input: VehicleConsumptionInput): AiConsumptionOutcome {
+        val snapshot = credentials.snapshot()
+        val provider = snapshot.active ?: return AiConsumptionOutcome.NoProvider
+        val apiKey = credentials.key(provider) ?: return AiConsumptionOutcome.MissingKey(provider)
+        val config = snapshot.config(provider)
+        val redaction = PlateRedactor.redact(input.variant)
+        val safeInput = input.copy(variant = redaction.text.trim())
+        val request = AiProviderRequests.generate(
+            provider = provider,
+            model = config.model,
+            apiKey = apiKey,
+            system = VehicleConsumptionPrompt.system,
+            user = VehicleConsumptionPrompt.user(safeInput),
+        )
+        return when (val result = call(request)) {
+            is HttpCall.Reply -> {
+                if (result.status !in 200..299) {
+                    AiConsumptionOutcome.HttpError(
+                        provider = provider,
+                        status = result.status,
+                        message = AiProviderRequests.errorMessage(result.body),
+                    )
+                } else {
+                    val text = AiProviderRequests.extractText(provider, result.body)
+                        ?: return AiConsumptionOutcome.InvalidResponse(provider)
+                    val payload = VehicleConsumptionParser.parse(text)
+                        ?: return AiConsumptionOutcome.InvalidResponse(provider)
+                    if (payload.isEmpty()) {
+                        AiConsumptionOutcome.NoValues(provider)
+                    } else {
+                        AiConsumptionOutcome.Success(
+                            provider = provider,
+                            consumption = payload,
+                            redactedPlateCount = redaction.removed,
+                        )
+                    }
+                }
+            }
+            is HttpCall.Failure -> AiConsumptionOutcome.NetworkError(provider, result.message)
         }
     }
 

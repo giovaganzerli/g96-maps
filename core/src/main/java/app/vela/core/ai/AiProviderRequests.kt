@@ -21,14 +21,15 @@ data class AiProviderRequest(
 )
 
 /**
- * The four native API dialects. Everything above this object speaks [VehicleAiPayload]; only the
- * envelope and the response path differ here.
+ * The four native API dialects. The prompt and schema decide the JSON; only the envelope and the
+ * response path differ here.
  */
 object AiProviderRequests {
     private const val JSON = "application/json; charset=utf-8"
     private const val ANTHROPIC_VERSION = "2023-06-01"
 
-    fun search(
+    /** One model turn. The provider only changes the envelope and the response path. */
+    fun generate(
         provider: AiProvider,
         model: String,
         apiKey: String,

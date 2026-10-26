@@ -63,7 +63,7 @@
     <string name="settings_vehicle_plate_hint">Resta solo su questo telefono</string>
     <string name="settings_vehicle_plate_privacy">Targa e dettagli del veicolo restano su questo telefono e non vengono inclusi nel backup di Android. La targa non viene mai inviata a un provider IA.</string>
     <string name="settings_vehicle_identity">Dati del veicolo</string>
-    <string name="settings_vehicle_editor_hint">Marca, modello, anno, carburante e tipologia sono obbligatori. I campi contrassegnati IA sono stati compilati dalla ricerca; il badge sparisce quando li modifichi. I campi energia e consumi cambiano in base al carburante scelto.</string>
+    <string name="settings_vehicle_editor_hint">Marca, modello, anno, carburante e tipologia sono obbligatori. I campi contrassegnati IA sono stati compilati dall\'IA; il badge sparisce quando li modifichi. I campi energia e consumi cambiano in base al carburante scelto.</string>
     <string name="settings_vehicle_kind">Tipologia</string>
     <string name="settings_vehicle_kind_car">Auto</string>
     <string name="settings_vehicle_kind_van">Furgone</string>
@@ -90,11 +90,16 @@
     <string name="settings_vehicle_width_mirrors">Larghezza con specchietti (m)</string>
     <string name="settings_vehicle_length">Lunghezza (m)</string>
     <string name="settings_vehicle_weight">Peso (kg)</string>
+    <string name="settings_vehicle_recalculate">Ricalcola i consumi con l\'IA</string>
+    <string name="settings_vehicle_recalculate_running">Ricalcolo in corso…</string>
+    <string name="settings_vehicle_recalculate_hint">Usa i dati del veicolo e il peso indicato sopra. L\'IA adatta i consumi attuali, compila i campi qui sotto e li contrassegna come IA; controllali prima di salvare. La targa non viene inviata.</string>
+    <string name="settings_vehicle_recalculate_done">Consumi ricalcolati con %1$s.</string>
+    <string name="settings_vehicle_recalculate_no_values">Il provider non ha restituito consumi utilizzabili. Riprova.</string>
+    <string name="settings_vehicle_recalculate_outdated">I dati del veicolo sono cambiati durante il calcolo. Ricalcola i consumi.</string>
     <string name="settings_vehicle_gross_weight">Massa complessiva (kg)</string>
     <string name="settings_vehicle_axle_load">Carico massimo per asse (kg)</string>
     <string name="settings_vehicle_axles">Assi</string>
     <string name="settings_vehicle_consumption">Energia e consumi</string>
-    <string name="settings_vehicle_fuel_consumption">Consumo carburante</string>
     <string name="settings_vehicle_electric_consumption">Consumo elettrico</string>
     <string name="settings_vehicle_consumption_l100">Consumo complessivo (L/100 km)</string>
     <string name="settings_vehicle_consumption_urban">Consumo urbano (L/100 km)</string>

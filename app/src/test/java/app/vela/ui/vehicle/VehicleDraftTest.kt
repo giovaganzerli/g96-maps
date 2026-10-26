@@ -3,6 +3,7 @@ package app.vela.ui.vehicle
 import app.vela.core.ai.VehicleAiCriteria
 import app.vela.core.ai.VehicleAiField
 import app.vela.core.ai.VehicleAiPayload
+import app.vela.core.ai.VehicleConsumptionPayload
 import app.vela.core.model.ConsumptionStandard
 import app.vela.core.model.Drivetrain
 import app.vela.core.model.FuelType
@@ -64,6 +65,121 @@ class VehicleDraftTest {
         )
         assertNull(complete.copy(fuelType = null).searchCriteria())
         assertNull(complete.copy(year = "nope").searchCriteria())
+    }
+
+    @Test
+    fun `the consumption request carries the main data and both weights`() {
+        val input = complete.copy(
+            variant = "1.3 Multijet",
+            plate = "AB123CD",
+            emissionStandard = "Euro 6d",
+            engineDisplacementCc = "1248",
+            powerKw = "70",
+            transmission = Transmission.MANUAL,
+            drivetrain = Drivetrain.FWD,
+            maxSpeedKph = "168",
+            lengthM = "3,653",
+            widthM = "1,643",
+            heightM = "1,551",
+            weightKg = "1200",
+            tankL = "38",
+            consumptionStandard = ConsumptionStandard.WLTP,
+            consumptionL100km = "4,2",
+            consumptionUrbanL100km = "5,1",
+        ).consumptionInput(referenceWeightKg = 1055)!!
+
+        assertEquals("Fiat", input.make)
+        assertEquals("Panda", input.model)
+        assertEquals("1.3 Multijet", input.variant)
+        assertEquals(2020, input.year)
+        assertEquals(VehicleKind.CAR, input.kind)
+        assertEquals(FuelType.PETROL, input.fuelType)
+        assertEquals(1200, input.weightKg)
+        assertEquals(1055, input.referenceWeightKg)
+        assertEquals("Euro 6d", input.emissionStandard)
+        assertEquals(1248, input.engineDisplacementCc)
+        assertEquals(70, input.powerKw)
+        assertEquals(Transmission.MANUAL, input.transmission)
+        assertEquals(Drivetrain.FWD, input.drivetrain)
+        assertEquals(168, input.maxSpeedKph)
+        assertEquals(3.653, input.lengthM!!, 0.0001)
+        assertEquals(38.0, input.tankL!!, 0.0001)
+        assertEquals(ConsumptionStandard.WLTP, input.consumptionStandard)
+        assertEquals(4.2, input.currentConsumptionL100km!!, 0.0001)
+        assertEquals(5.1, input.currentConsumptionUrbanL100km!!, 0.0001)
+        assertNull(input.batteryKwh)
+        assertNull(input.currentEnergyKwh100km)
+    }
+
+    @Test
+    fun `a consumption request needs identity and a valid weight`() {
+        assertNull(complete.copy(weightKg = "").consumptionInput())
+        assertNull(complete.copy(weightKg = "120000").consumptionInput())
+        assertNull(complete.copy(year = "nope").consumptionInput())
+        assertNull(complete.copy(fuelType = null).consumptionInput())
+        assertNull(complete.copy(kind = null).consumptionInput())
+    }
+
+    @Test
+    fun `recalculated consumption fills only the figures for the selected fuel`() {
+        val payload = VehicleConsumptionPayload(
+            consumptionL100km = 5.1,
+            consumptionUrbanL100km = 6.4,
+            consumptionExtraUrbanL100km = 4.3,
+            consumptionMotorwayL100km = 5.5,
+            energyKwh100km = 17.2,
+            energyUrbanKwh100km = 15.1,
+            energyExtraUrbanKwh100km = 16.0,
+            energyMotorwayKwh100km = 21.4,
+        )
+
+        val applied = complete.copy(consumptionL100km = "4.2").withRecalculatedConsumption(payload)
+
+        assertEquals(formatNumber(5.1), applied.draft.consumptionL100km)
+        assertEquals(formatNumber(6.4), applied.draft.consumptionUrbanL100km)
+        assertEquals(formatNumber(4.3), applied.draft.consumptionExtraUrbanL100km)
+        assertEquals(formatNumber(5.5), applied.draft.consumptionMotorwayL100km)
+        assertEquals("", applied.draft.energyKwh100km)
+        assertEquals(
+            setOf(
+                VehicleAiField.CONSUMPTION_L100KM,
+                VehicleAiField.CONSUMPTION_URBAN_L100KM,
+                VehicleAiField.CONSUMPTION_EXTRA_URBAN_L100KM,
+                VehicleAiField.CONSUMPTION_MOTORWAY_L100KM,
+            ),
+            applied.badges,
+        )
+    }
+
+    @Test
+    fun `a plug-in hybrid receives fuel and electric figures`() {
+        val applied = complete.copy(fuelType = FuelType.PLUG_IN_HYBRID).withRecalculatedConsumption(
+            VehicleConsumptionPayload(
+                consumptionL100km = 5.1,
+                energyKwh100km = 17.2,
+            ),
+        )
+
+        assertEquals(formatNumber(5.1), applied.draft.consumptionL100km)
+        assertEquals(formatNumber(17.2), applied.draft.energyKwh100km)
+        assertEquals(
+            setOf(VehicleAiField.CONSUMPTION_L100KM, VehicleAiField.ENERGY_KWH100KM),
+            applied.badges,
+        )
+    }
+
+    @Test
+    fun `a null figure leaves the existing value and badge alone`() {
+        val applied = complete.copy(
+            consumptionL100km = "4.2",
+            consumptionUrbanL100km = "5.1",
+        ).withRecalculatedConsumption(
+            VehicleConsumptionPayload(consumptionL100km = 5.0),
+        )
+
+        assertEquals(formatNumber(5.0), applied.draft.consumptionL100km)
+        assertEquals("5.1", applied.draft.consumptionUrbanL100km)
+        assertEquals(setOf(VehicleAiField.CONSUMPTION_L100KM), applied.badges)
     }
 
     @Test

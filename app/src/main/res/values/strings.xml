@@ -99,7 +99,7 @@
     <string name="settings_vehicle_plate_hint">Kept only on this phone</string>
     <string name="settings_vehicle_plate_privacy">Plate and vehicle details stay on this phone and are not included in Android backup. The plate is never sent to an AI provider.</string>
     <string name="settings_vehicle_identity">Identity</string>
-    <string name="settings_vehicle_editor_hint">Make, model, year, fuel and vehicle type are required. Fields marked AI were filled by the search; the badge disappears when you change them. Energy and consumption fields follow the selected fuel.</string>
+    <string name="settings_vehicle_editor_hint">Make, model, year, fuel and vehicle type are required. Fields marked AI were filled by AI; the badge disappears when you change them. Energy and consumption fields follow the selected fuel.</string>
     <string name="settings_vehicle_kind">Type</string>
     <string name="settings_vehicle_kind_car">Car</string>
     <string name="settings_vehicle_kind_van">Van</string>
@@ -126,11 +126,16 @@
     <string name="settings_vehicle_width_mirrors">Width with mirrors (m)</string>
     <string name="settings_vehicle_length">Length (m)</string>
     <string name="settings_vehicle_weight">Weight (kg)</string>
+    <string name="settings_vehicle_recalculate">Recalculate consumption with AI</string>
+    <string name="settings_vehicle_recalculate_running">Recalculating…</string>
+    <string name="settings_vehicle_recalculate_hint">Uses the vehicle data and the weight above. AI adjusts the current figures, fills the fields below and marks them AI; review them before saving. The plate is not sent.</string>
+    <string name="settings_vehicle_recalculate_done">Consumption recalculated with %1$s.</string>
+    <string name="settings_vehicle_recalculate_no_values">The provider returned no usable consumption figures. Try again.</string>
+    <string name="settings_vehicle_recalculate_outdated">Vehicle data changed during the calculation. Recalculate consumption.</string>
     <string name="settings_vehicle_gross_weight">Gross weight (kg)</string>
     <string name="settings_vehicle_axle_load">Max axle load (kg)</string>
     <string name="settings_vehicle_axles">Axles</string>
     <string name="settings_vehicle_consumption">Energy and consumption</string>
-    <string name="settings_vehicle_fuel_consumption">Fuel consumption</string>
     <string name="settings_vehicle_electric_consumption">Electric consumption</string>
     <string name="settings_vehicle_consumption_l100">Overall consumption (L/100 km)</string>
     <string name="settings_vehicle_consumption_urban">Urban consumption (L/100 km)</string>

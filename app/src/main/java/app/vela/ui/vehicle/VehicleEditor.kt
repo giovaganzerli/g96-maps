@@ -7,10 +7,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -19,14 +23,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.vela.R
+import app.vela.core.ai.AiConsumptionOutcome
+import app.vela.core.ai.AiProvider
 import app.vela.core.ai.VehicleAiField
 import app.vela.core.ai.VehicleAiIdentityField
+import app.vela.core.ai.VehicleConsumptionInput
 import app.vela.core.model.Drivetrain
 import app.vela.core.model.FuelType
 import app.vela.core.model.Transmission
@@ -39,6 +47,7 @@ import app.vela.ui.settings.PageIntro
 import app.vela.ui.settings.SettingsGroup
 import app.vela.ui.settings.SettingsScaffold
 import app.vela.ui.settings.settingsFieldColors
+import kotlinx.coroutines.launch
 
 /** Everything the editor needs; [badges] and conflicts live only in this screen. */
 internal data class VehicleEditorTarget(
@@ -49,14 +58,32 @@ internal data class VehicleEditorTarget(
     val redactedPlateCount: Int = 0,
 )
 
+private sealed interface ConsumptionRecalcState {
+    data object Idle : ConsumptionRecalcState
+    data object Running : ConsumptionRecalcState
+    data class Done(val provider: AiProvider, val redactedPlateCount: Int) : ConsumptionRecalcState
+    data object Outdated : ConsumptionRecalcState
+    data class Failed(val outcome: AiConsumptionOutcome) : ConsumptionRecalcState
+}
+
 @Composable
 internal fun VehicleEditorScreen(
     target: VehicleEditorTarget,
     onBack: () -> Unit,
     onSave: (VehicleProfile) -> Unit,
+    onRecalculateConsumption: suspend (VehicleConsumptionInput) -> AiConsumptionOutcome,
 ) {
     var draft by remember(target.draft.id) { mutableStateOf(target.draft) }
     var badges by remember(target.draft.id) { mutableStateOf(target.badges) }
+    var referenceWeightKg by remember(target.draft.id) {
+        mutableStateOf(parseInt(target.draft.weightKg)?.takeIf { it in 1..100_000 })
+    }
+    var recalcState by remember(target.draft.id) {
+        mutableStateOf<ConsumptionRecalcState>(ConsumptionRecalcState.Idle)
+    }
+    val scope = rememberCoroutineScope()
+    val recalcInput = draft.consumptionInput(referenceWeightKg)
+    val recalcRunning = recalcState is ConsumptionRecalcState.Running
     val valid = draft.isValid()
 
     fun change(field: VehicleAiField?, transform: (VehicleDraft) -> VehicleDraft) {
@@ -65,6 +92,9 @@ internal fun VehicleEditorScreen(
     }
 
     fun changeFuel(fuel: FuelType) {
+        if (recalcState !is ConsumptionRecalcState.Running) {
+            recalcState = ConsumptionRecalcState.Idle
+        }
         val cleared = draft.clearedByFuel(fuel)
         draft = draft.withFuel(fuel)
         badges = badges - cleared
@@ -226,12 +256,67 @@ internal fun VehicleEditorScreen(
             )
             VehicleField(
                 value = draft.weightKg,
-                onValueChange = { change(VehicleAiField.WEIGHT_KG) { d -> d.copy(weightKg = it) } },
+                onValueChange = {
+                    if (recalcState !is ConsumptionRecalcState.Running) {
+                        recalcState = ConsumptionRecalcState.Idle
+                    }
+                    change(VehicleAiField.WEIGHT_KG) { d -> d.copy(weightKg = it) }
+                },
                 label = stringResource(R.string.settings_vehicle_weight),
                 numeric = true,
                 integer = true,
                 badge = VehicleAiField.WEIGHT_KG in badges,
             )
+            if (draft.fuelType != null) {
+                FilledTonalButton(
+                    onClick = {
+                        val input = draft.consumptionInput(referenceWeightKg)
+                            ?: return@FilledTonalButton
+                        recalcState = ConsumptionRecalcState.Running
+                        scope.launch {
+                            val outcome = onRecalculateConsumption(input)
+                            if (outcome is AiConsumptionOutcome.Success) {
+                                if (draft.consumptionInput(referenceWeightKg) != input) {
+                                    recalcState = ConsumptionRecalcState.Outdated
+                                } else {
+                                    val applied = draft.withRecalculatedConsumption(outcome.consumption)
+                                    if (applied.badges.isEmpty()) {
+                                        recalcState = ConsumptionRecalcState.Failed(
+                                            AiConsumptionOutcome.NoValues(outcome.provider),
+                                        )
+                                    } else {
+                                        draft = applied.draft
+                                        badges = badges + applied.badges
+                                        referenceWeightKg = input.weightKg
+                                        recalcState = ConsumptionRecalcState.Done(
+                                            provider = outcome.provider,
+                                            redactedPlateCount = outcome.redactedPlateCount,
+                                        )
+                                    }
+                                }
+                            } else {
+                                recalcState = ConsumptionRecalcState.Failed(outcome)
+                            }
+                        }
+                    },
+                    enabled = recalcInput != null && !recalcRunning,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    if (recalcRunning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.settings_vehicle_recalculate_running))
+                    } else {
+                        Text(stringResource(R.string.settings_vehicle_recalculate))
+                    }
+                }
+                Hint(stringResource(R.string.settings_vehicle_recalculate_hint))
+                RecalculationMessage(recalcState)
+            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -259,7 +344,6 @@ internal fun VehicleEditorScreen(
                     )
                 }
                 if (fuel.usesFuelConsumption()) {
-                    SettingsGroupHeader(title = stringResource(R.string.settings_vehicle_fuel_consumption))
                     VehicleField(
                         value = draft.consumptionL100km,
                         onValueChange = { change(VehicleAiField.CONSUMPTION_L100KM) { d -> d.copy(consumptionL100km = it) } },
@@ -432,6 +516,49 @@ internal fun SettingsGroupHeader(title: String) {
 @Composable
 internal fun groupTitle(title: String, badge: Boolean): String =
     if (badge) "$title · ${stringResource(R.string.settings_vehicle_ai_badge)}" else title
+
+@Composable
+private fun RecalculationMessage(state: ConsumptionRecalcState) {
+    when (state) {
+        is ConsumptionRecalcState.Done -> {
+            Hint(
+                stringResource(
+                    R.string.settings_vehicle_recalculate_done,
+                    stringResource(aiProviderLabel(state.provider)),
+                ),
+            )
+            plateRedactionWarning(state.redactedPlateCount)
+        }
+        ConsumptionRecalcState.Outdated ->
+            Hint(stringResource(R.string.settings_vehicle_recalculate_outdated))
+        is ConsumptionRecalcState.Failed -> {
+            val text = when (val outcome = state.outcome) {
+                AiConsumptionOutcome.NoProvider ->
+                    stringResource(R.string.settings_vehicle_ai_provider_none)
+                is AiConsumptionOutcome.MissingKey ->
+                    stringResource(R.string.settings_vehicle_ai_missing_key)
+                is AiConsumptionOutcome.HttpError -> buildString {
+                    append(stringResource(R.string.settings_vehicle_ai_http_error, outcome.status))
+                    outcome.message?.let { append(" · ").append(it) }
+                }
+                is AiConsumptionOutcome.NetworkError ->
+                    stringResource(R.string.settings_vehicle_ai_network_error)
+                is AiConsumptionOutcome.InvalidResponse ->
+                    stringResource(R.string.settings_vehicle_ai_invalid)
+                is AiConsumptionOutcome.NoValues ->
+                    stringResource(R.string.settings_vehicle_recalculate_no_values)
+                is AiConsumptionOutcome.Success -> return
+            }
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        ConsumptionRecalcState.Idle, ConsumptionRecalcState.Running -> Unit
+    }
+}
 
 @Composable
 internal fun conflictWarning(conflicts: Set<VehicleAiIdentityField>) {
