@@ -118,16 +118,27 @@ What Vela Maps does today, one line per feature. How each one works is in [SPEC.
 
 ## Vehicles
 
-- Settings > Vehicles keeps a local garage: make, model, variant, year, type, fuel, optional
-  plate, routing mode, emission standard, engine, power, transmission, drivetrain, dimensions,
-  weights, axles, consumption and cycle, battery, tank, charging and notes. Add, edit and delete
-  them; every field stays editable.
-- Add offers **Cerca con IA** or **Inserisci manualmente**. AI needs make, model, year and fuel,
-  can take a free-text query, previews the result and opens the editor with an AI badge on each
-  filled field. The AI query and badges are never saved.
+- Settings > Vehicles keeps a local garage. The editor covers identity (plate, make, model,
+  version/trim, year, type), engine and transmission (displacement, power, fuel, emission class,
+  gearbox, drivetrain), dimensions and weights, energy and consumption, and speeds. Only Auto,
+  Furgone and Camper and seven fuels are offered for new vehicles; older legacy values stay
+  editable when they already exist.
+- Fuel-dependent fields appear only when relevant: diesel hides battery and electric
+  consumption, electric hides tank and fuel consumption, and hybrid/plug-in hybrid combine the
+  fields that apply. Changing fuel clears the values and AI badges that no longer apply. The
+  old Percorso section is gone.
+- **Aggiungi veicolo** opens AI search directly when the active provider has a saved key;
+  otherwise it opens the manual editor. The AI form also has **Inserisci manualmente**, so manual
+  creation stays reachable. AI needs make, model, year and fuel; version/trim is optional and
+  can carry useful detail. It previews the result and opens the editor with an AI badge on each
+  filled field. AI badges and the search form are never saved; the chosen version/trim becomes
+  the normal variant field.
 - Settings > AI stores the key and model for one active provider: OpenAI, Anthropic, Google or
-  OpenRouter. Keys are encrypted with the Android Keystore, excluded from backup and transfer,
-  and there is no built-in key or automatic fallback. The plate is never sent to a provider.
+  OpenRouter. The wording is generic because the active provider will serve every AI feature,
+  not only the garage. A saved key stays visible as a fixed bullet mask; **Salva** and
+  **Elimina** share one row, with a small test area below. Keys are encrypted with the Android
+  Keystore, excluded from backup and transfer, and there is no built-in key or automatic
+  fallback. The plate is never sent to a provider.
 - One vehicle is active, marked with a radio row. The route pickers show it as a chip in drive
   mode, and tapping the chip switches the active vehicle.
 - The garage stays on the phone and is not included in Android backup. It does not change

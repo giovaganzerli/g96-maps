@@ -9,6 +9,9 @@ import app.vela.core.model.FuelType
 import app.vela.core.model.Transmission
 import app.vela.core.model.VehicleKind
 
+/** Marks a required field in the editor and the AI search form. */
+internal fun requiredLabel(label: String): String = "$label *"
+
 @Composable
 internal fun fuelLabel(fuel: FuelType): String = stringResource(
     when (fuel) {

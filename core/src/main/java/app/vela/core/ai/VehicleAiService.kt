@@ -58,18 +58,19 @@ class VehicleAiService @Inject constructor(
 
     fun setActive(provider: AiProvider) = credentials.setActive(provider)
 
-    suspend fun search(criteria: VehicleAiCriteria, query: String): AiSearchOutcome {
+    suspend fun search(criteria: VehicleAiCriteria): AiSearchOutcome {
         val snapshot = credentials.snapshot()
         val provider = snapshot.active ?: return AiSearchOutcome.NoProvider
         val apiKey = credentials.key(provider) ?: return AiSearchOutcome.MissingKey(provider)
         val config = snapshot.config(provider)
-        val redaction = PlateRedactor.redact(query)
+        val redaction = PlateRedactor.redact(criteria.variant)
+        val safeCriteria = criteria.copy(variant = redaction.text.trim())
         val request = AiProviderRequests.search(
             provider = provider,
             model = config.model,
             apiKey = apiKey,
             system = VehicleAiPrompt.system,
-            user = VehicleAiPrompt.user(criteria, redaction.text),
+            user = VehicleAiPrompt.user(safeCriteria),
         )
         return when (val result = call(request)) {
             is HttpCall.Reply -> {
@@ -86,7 +87,7 @@ class VehicleAiService @Inject constructor(
                         ?: return AiSearchOutcome.InvalidResponse(provider)
                     AiSearchOutcome.Success(
                         provider = provider,
-                        answer = VehicleAiMerge.merge(criteria, payload)
+                        answer = VehicleAiMerge.merge(safeCriteria, payload)
                             .copy(redactedPlateCount = redaction.removed),
                     )
                 }

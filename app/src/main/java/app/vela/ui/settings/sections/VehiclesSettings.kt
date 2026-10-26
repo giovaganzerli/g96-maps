@@ -36,6 +36,8 @@ import app.vela.R
 import app.vela.core.ai.PlateRedactor
 import app.vela.core.ai.VehicleAiCriteria
 import app.vela.core.ai.VehicleAiField
+import app.vela.core.model.Drivetrain
+import app.vela.core.model.Transmission
 import app.vela.core.model.VehicleProfile
 import app.vela.ui.VelaDialog
 import app.vela.ui.VelaMenu
@@ -48,17 +50,28 @@ import app.vela.ui.settings.PageIntro
 import app.vela.ui.settings.SettingsGroup
 import app.vela.ui.settings.SettingsScaffold
 import app.vela.ui.vehicle.ChoiceChips
+import app.vela.ui.vehicle.VEHICLE_FUELS
 import app.vela.ui.vehicle.VehicleAiSearchState
 import app.vela.ui.vehicle.VehicleDraft
 import app.vela.ui.vehicle.VehicleEditorScreen
 import app.vela.ui.vehicle.VehicleEditorTarget
 import app.vela.ui.vehicle.VehicleField
 import app.vela.ui.vehicle.VehicleSettingsViewModel
+import app.vela.ui.vehicle.aiBadges
 import app.vela.ui.vehicle.aiProviderLabel
 import app.vela.ui.vehicle.conflictWarning
+import app.vela.ui.vehicle.drivetrainLabel
 import app.vela.ui.vehicle.fuelLabel
 import app.vela.ui.vehicle.kindLabel
 import app.vela.ui.vehicle.plateRedactionWarning
+import app.vela.ui.vehicle.requiredLabel
+import app.vela.ui.vehicle.transmissionLabel
+import app.vela.ui.vehicle.usesBattery
+import app.vela.ui.vehicle.usesElectricConsumption
+import app.vela.ui.vehicle.usesEmissionStandard
+import app.vela.ui.vehicle.usesEngineDisplacement
+import app.vela.ui.vehicle.usesFuelConsumption
+import app.vela.ui.vehicle.usesTank
 
 /** The garage list, the AI/manual creation entry points, and the AI result preview. */
 @Composable
@@ -68,18 +81,21 @@ internal fun VehiclesSettingsScreen(
 ) {
     val vehicles by vm.vehicles.collectAsStateWithLifecycle()
     val active by vm.activeVehicle.collectAsStateWithLifecycle()
+    val aiSettings by vm.aiSettings.collectAsStateWithLifecycle()
     var page by remember { mutableStateOf<VehiclePage>(VehiclePage.Garage) }
     var editor by remember { mutableStateOf<VehicleEditorTarget?>(null) }
     var deleting by remember { mutableStateOf<VehicleProfile?>(null) }
+
+    val aiReady = aiSettings.active?.let { aiSettings.config(it).hasKey } == true
 
     BackHandler(enabled = editor != null || page != VehiclePage.Garage) {
         when {
             editor != null -> editor = null
             page == VehiclePage.CreateAi -> {
                 vm.resetSearch()
-                page = VehiclePage.CreateChoice
+                page = VehiclePage.Garage
             }
-            page == VehiclePage.CreateChoice -> page = VehiclePage.Garage
+            else -> Unit
         }
     }
 
@@ -103,7 +119,15 @@ internal fun VehiclesSettingsScreen(
                 vehicles = vehicles,
                 activeId = active?.id,
                 onBack = onBack,
-                onAdd = { page = VehiclePage.CreateChoice },
+                onAdd = {
+                    if (aiReady) {
+                        vm.resetSearch()
+                        page = VehiclePage.CreateAi
+                    } else {
+                        editor = VehicleEditorTarget(VehicleDraft.newManual(), isNew = true)
+                        page = VehiclePage.Garage
+                    }
+                },
                 onActivate = { vm.setActive(it) },
                 onEdit = { editor = VehicleEditorTarget(VehicleDraft.from(it), isNew = false) },
                 onDelete = { deleting = it },
@@ -125,29 +149,28 @@ internal fun VehiclesSettingsScreen(
             }
         }
 
-        VehiclePage.CreateChoice -> CreateChoice(
-            onBack = { page = VehiclePage.Garage },
-            onAi = { page = VehiclePage.CreateAi },
-            onManual = {
-                editor = VehicleEditorTarget(VehicleDraft.newManual(), isNew = true)
-                page = VehiclePage.Garage
-            },
-        )
-
         VehiclePage.CreateAi -> VehicleAiCreate(
             vm = vm,
             onBack = {
                 vm.resetSearch()
-                page = VehiclePage.CreateChoice
+                page = VehiclePage.Garage
             },
-            onOpenEditor = { target -> editor = target },
+            onOpenEditor = { target ->
+                vm.resetSearch()
+                page = VehiclePage.Garage
+                editor = target
+            },
+            onManual = {
+                vm.resetSearch()
+                editor = VehicleEditorTarget(VehicleDraft.newManual(), isNew = true)
+                page = VehiclePage.Garage
+            },
         )
     }
 }
 
 private sealed interface VehiclePage {
     data object Garage : VehiclePage
-    data object CreateChoice : VehiclePage
     data object CreateAi : VehiclePage
 }
 
@@ -260,48 +283,17 @@ private fun vehicleSummary(vehicle: VehicleProfile): String =
     ).joinToString(" · ")
 
 @Composable
-private fun CreateChoice(
-    onBack: () -> Unit,
-    onAi: () -> Unit,
-    onManual: () -> Unit,
-) {
-    SettingsScaffold(stringResource(R.string.settings_vehicle_add), onBack) { topRow ->
-        Spacer(Modifier.height(4.dp))
-        PageIntro(stringResource(R.string.settings_vehicle_create_hint))
-        Spacer(Modifier.height(12.dp))
-        FilledTonalButton(
-            onClick = onAi,
-            modifier = topRow.fillMaxWidth().padding(horizontal = 16.dp),
-        ) {
-            Icon(Sym.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.settings_vehicle_add_ai))
-        }
-        Hint(stringResource(R.string.settings_vehicle_add_ai_hint))
-        Spacer(Modifier.height(16.dp))
-        OutlinedButton(
-            onClick = onManual,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        ) {
-            Text(stringResource(R.string.settings_vehicle_add_manual))
-        }
-        Hint(stringResource(R.string.settings_vehicle_add_manual_hint))
-        Spacer(Modifier.height(24.dp))
-    }
-}
-
-@Composable
 private fun VehicleAiCreate(
     vm: VehicleSettingsViewModel,
     onBack: () -> Unit,
     onOpenEditor: (VehicleEditorTarget) -> Unit,
+    onManual: () -> Unit,
 ) {
     val state by vm.search.collectAsStateWithLifecycle()
     val settings by vm.aiSettings.collectAsStateWithLifecycle()
     var form by remember { mutableStateOf(VehicleDraft.newManual()) }
-    var query by remember { mutableStateOf("") }
     var pendingCriteria by remember { mutableStateOf<VehicleAiCriteria?>(null) }
-    val redaction = remember(query) { PlateRedactor.redact(query) }
+    val redaction = remember(form.variant) { PlateRedactor.redact(form.variant) }
 
     val success = state as? VehicleAiSearchState.Success
     BackHandler {
@@ -314,13 +306,14 @@ private fun VehicleAiCreate(
     }
     if (success != null && pendingCriteria != null) {
         val criteria = pendingCriteria!!
-        val draft = remember(success.answer, criteria, form.plate) {
-            VehicleDraft.fromAi(criteria, success.answer.payload, form.plate)
+        val draft = remember(success.answer, criteria) {
+            VehicleDraft.fromAi(criteria, success.answer.payload)
         }
+        val badges = draft.aiBadges(success.answer.badgeFields)
         VehicleAiPreview(
             providerLabel = stringResource(aiProviderLabel(success.provider)),
             draft = draft,
-            badges = success.answer.badgeFields,
+            badges = badges,
             conflicts = success.answer.conflicts,
             redactedPlateCount = success.answer.redactedPlateCount,
             onBack = { vm.resetSearch() },
@@ -329,7 +322,7 @@ private fun VehicleAiCreate(
                     VehicleEditorTarget(
                         draft = draft,
                         isNew = true,
-                        badges = success.answer.badgeFields,
+                        badges = badges,
                         conflicts = success.answer.conflicts,
                         redactedPlateCount = success.answer.redactedPlateCount,
                     ),
@@ -363,51 +356,40 @@ private fun VehicleAiCreate(
             VehicleField(
                 value = form.make,
                 onValueChange = { form = form.copy(make = it) },
-                label = stringResource(R.string.settings_vehicle_make),
+                label = requiredLabel(stringResource(R.string.settings_vehicle_make)),
                 modifier = topRow,
             )
             VehicleField(
                 value = form.model,
                 onValueChange = { form = form.copy(model = it) },
-                label = stringResource(R.string.settings_vehicle_model),
+                label = requiredLabel(stringResource(R.string.settings_vehicle_model)),
+            )
+            VehicleField(
+                value = form.variant,
+                onValueChange = { form = form.copy(variant = it) },
+                label = stringResource(R.string.settings_vehicle_variant),
+                placeholder = stringResource(R.string.settings_vehicle_variant_hint),
             )
             VehicleField(
                 value = form.year,
                 onValueChange = { form = form.copy(year = it) },
-                label = stringResource(R.string.settings_vehicle_year),
+                label = requiredLabel(stringResource(R.string.settings_vehicle_year)),
                 numeric = true,
                 integer = true,
-            )
-            VehicleField(
-                value = form.plate,
-                onValueChange = { form = form.copy(plate = it) },
-                label = stringResource(R.string.settings_vehicle_plate),
-                placeholder = stringResource(R.string.settings_vehicle_plate_hint),
             )
         }
 
         Spacer(Modifier.height(8.dp))
-        SettingsGroup(title = stringResource(R.string.settings_vehicle_fuel)) {
+        SettingsGroup(title = requiredLabel(stringResource(R.string.settings_vehicle_fuel))) {
             ChoiceChips(
-                options = app.vela.core.model.FuelType.entries.map { it to fuelLabel(it) },
+                options = VEHICLE_FUELS.map { it to fuelLabel(it) },
                 selected = form.fuelType,
                 onSelected = { form = form.copy(fuelType = it) },
             )
         }
-
-        Spacer(Modifier.height(8.dp))
-        SettingsGroup(title = stringResource(R.string.settings_vehicle_ai_query_group)) {
-            VehicleField(
-                value = query,
-                onValueChange = { query = it },
-                label = stringResource(R.string.settings_vehicle_ai_query),
-                placeholder = stringResource(R.string.settings_vehicle_ai_query_hint),
-                singleLine = false,
-            )
-            Hint(stringResource(R.string.settings_vehicle_ai_query_privacy))
-            if (redaction.removed > 0) {
-                plateRedactionWarning(redaction.removed)
-            }
+        Hint(stringResource(R.string.settings_vehicle_ai_variant_privacy))
+        if (redaction.removed > 0) {
+            plateRedactionWarning(redaction.removed)
         }
 
         Spacer(Modifier.height(12.dp))
@@ -415,7 +397,7 @@ private fun VehicleAiCreate(
             onClick = {
                 val ready = form.searchCriteria() ?: return@Button
                 pendingCriteria = ready
-                vm.search(ready, query)
+                vm.search(ready)
             },
             enabled = criteria != null && !loading,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -434,6 +416,14 @@ private fun VehicleAiCreate(
         }
         if (criteria == null) Hint(stringResource(R.string.settings_vehicle_ai_criteria_required))
         SearchError(state)
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onManual,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        ) {
+            Text(stringResource(R.string.settings_vehicle_add_manual))
+        }
+        Hint(stringResource(R.string.settings_vehicle_add_manual_hint))
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -474,43 +464,50 @@ private fun VehicleAiPreview(
         if (!value.isNullOrBlank()) rows += label to value
     }
 
+    val fuel = draft.fuelType
     add(stringResource(R.string.settings_vehicle_make), draft.make)
     add(stringResource(R.string.settings_vehicle_model), draft.model)
     add(stringResource(R.string.settings_vehicle_variant), draft.variant)
     add(stringResource(R.string.settings_vehicle_year), draft.year)
-    draft.fuelType?.let { rows += stringResource(R.string.settings_vehicle_fuel) to fuelLabel(it) }
+    fuel?.let { rows += stringResource(R.string.settings_vehicle_fuel) to fuelLabel(it) }
     draft.kind?.let { rows += stringResource(R.string.settings_vehicle_kind) to kindLabel(it) }
     add(stringResource(R.string.settings_vehicle_plate), draft.plate)
-    add(stringResource(R.string.settings_vehicle_emission_standard), draft.emissionStandard)
-    add(stringResource(R.string.settings_vehicle_engine_cc), draft.engineDisplacementCc)
-    add(stringResource(R.string.settings_vehicle_power_kw), draft.powerKw)
-    if (draft.transmission != app.vela.core.model.Transmission.UNKNOWN) {
-        rows += stringResource(R.string.settings_vehicle_transmission) to
-            app.vela.ui.vehicle.transmissionLabel(draft.transmission)
+    if (fuel == null || fuel.usesEngineDisplacement()) {
+        add(stringResource(R.string.settings_vehicle_engine_cc), draft.engineDisplacementCc)
     }
-    if (draft.drivetrain != app.vela.core.model.Drivetrain.UNKNOWN) {
+    add(stringResource(R.string.settings_vehicle_power_kw), draft.powerKw)
+    if (fuel == null || fuel.usesEmissionStandard()) {
+        add(stringResource(R.string.settings_vehicle_emission_standard), draft.emissionStandard)
+    }
+    if (draft.transmission != Transmission.UNKNOWN) {
+        rows += stringResource(R.string.settings_vehicle_transmission) to
+            transmissionLabel(draft.transmission)
+    }
+    if (draft.drivetrain != Drivetrain.UNKNOWN) {
         rows += stringResource(R.string.settings_vehicle_drivetrain) to
-            app.vela.ui.vehicle.drivetrainLabel(draft.drivetrain)
+            drivetrainLabel(draft.drivetrain)
     }
     add(stringResource(R.string.settings_vehicle_max_speed), draft.maxSpeedKph)
     add(stringResource(R.string.settings_vehicle_length), draft.lengthM)
     add(stringResource(R.string.settings_vehicle_width), draft.widthM)
-    add(stringResource(R.string.settings_vehicle_width_mirrors), draft.widthWithMirrorsM)
     add(stringResource(R.string.settings_vehicle_height), draft.heightM)
     add(stringResource(R.string.settings_vehicle_weight), draft.weightKg)
-    add(stringResource(R.string.settings_vehicle_gross_weight), draft.grossWeightKg)
-    add(stringResource(R.string.settings_vehicle_axle_load), draft.axleLoadKg)
-    add(stringResource(R.string.settings_vehicle_axles), draft.axleCount)
-    add(stringResource(R.string.settings_vehicle_consumption_l100), draft.consumptionL100km)
-    add(stringResource(R.string.settings_vehicle_consumption_kwh), draft.energyKwh100km)
-    add(stringResource(R.string.settings_vehicle_battery), draft.batteryKwh)
-    add(stringResource(R.string.settings_vehicle_tank), draft.tankL)
-    if (draft.consumptionStandard != app.vela.core.model.ConsumptionStandard.UNKNOWN) {
-        rows += stringResource(R.string.settings_vehicle_consumption_standard) to
-            app.vela.ui.vehicle.consumptionStandardLabel(draft.consumptionStandard)
+    if (fuel != null) {
+        if (fuel.usesTank()) add(stringResource(R.string.settings_vehicle_tank), draft.tankL)
+        if (fuel.usesBattery()) add(stringResource(R.string.settings_vehicle_battery), draft.batteryKwh)
+        if (fuel.usesFuelConsumption()) {
+            add(stringResource(R.string.settings_vehicle_consumption_l100), draft.consumptionL100km)
+            add(stringResource(R.string.settings_vehicle_consumption_urban), draft.consumptionUrbanL100km)
+            add(stringResource(R.string.settings_vehicle_consumption_extra_urban), draft.consumptionExtraUrbanL100km)
+            add(stringResource(R.string.settings_vehicle_consumption_motorway), draft.consumptionMotorwayL100km)
+        }
+        if (fuel.usesElectricConsumption()) {
+            add(stringResource(R.string.settings_vehicle_consumption_kwh), draft.energyKwh100km)
+            add(stringResource(R.string.settings_vehicle_energy_urban), draft.energyUrbanKwh100km)
+            add(stringResource(R.string.settings_vehicle_energy_extra_urban), draft.energyExtraUrbanKwh100km)
+            add(stringResource(R.string.settings_vehicle_energy_motorway), draft.energyMotorwayKwh100km)
+        }
     }
-    add(stringResource(R.string.settings_vehicle_max_charging), draft.maxChargingPowerKw)
-    add(stringResource(R.string.settings_vehicle_connector), draft.chargingConnector)
 
     val technical = badges.isNotEmpty()
     SettingsScaffold(stringResource(R.string.settings_vehicle_ai_preview_title), onBack) { topRow ->

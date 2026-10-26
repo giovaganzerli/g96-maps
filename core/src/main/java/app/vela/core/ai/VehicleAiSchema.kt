@@ -1,6 +1,5 @@
 package app.vela.core.ai
 
-import app.vela.core.model.ConsumptionStandard
 import app.vela.core.model.Drivetrain
 import app.vela.core.model.FuelType
 import app.vela.core.model.Transmission
@@ -30,19 +29,18 @@ enum class VehicleAiField(val key: String) {
     MAX_SPEED_KPH("maxSpeedKph"),
     LENGTH_M("lengthM"),
     WIDTH_M("widthM"),
-    WIDTH_WITH_MIRRORS_M("widthWithMirrorsM"),
     HEIGHT_M("heightM"),
     WEIGHT_KG("weightKg"),
-    GROSS_WEIGHT_KG("grossWeightKg"),
-    AXLE_LOAD_KG("axleLoadKg"),
-    AXLE_COUNT("axleCount"),
     TANK_L("tankL"),
     BATTERY_KWH("batteryKwh"),
     CONSUMPTION_L100KM("consumptionL100km"),
+    CONSUMPTION_URBAN_L100KM("consumptionUrbanL100km"),
+    CONSUMPTION_EXTRA_URBAN_L100KM("consumptionExtraUrbanL100km"),
+    CONSUMPTION_MOTORWAY_L100KM("consumptionMotorwayL100km"),
     ENERGY_KWH100KM("energyKwh100km"),
-    CONSUMPTION_STANDARD("consumptionStandard"),
-    MAX_CHARGING_POWER_KW("maxChargingPowerKw"),
-    CHARGING_CONNECTOR("chargingConnector"),
+    ENERGY_URBAN_KWH100KM("energyUrbanKwh100km"),
+    ENERGY_EXTRA_URBAN_KWH100KM("energyExtraUrbanKwh100km"),
+    ENERGY_MOTORWAY_KWH100KM("energyMotorwayKwh100km"),
 }
 
 /** The identity fields the user typed before the search. AI may not replace them. */
@@ -67,21 +65,20 @@ data class VehicleAiPayload(
     val maxSpeedKph: Int? = null,
     val lengthM: Double? = null,
     val widthM: Double? = null,
-    val widthWithMirrorsM: Double? = null,
     val heightM: Double? = null,
     val weightKg: Int? = null,
-    val grossWeightKg: Int? = null,
-    val axleLoadKg: Int? = null,
-    val axleCount: Int? = null,
     val tankL: Double? = null,
     val batteryKwh: Double? = null,
     val consumptionL100km: Double? = null,
+    val consumptionUrbanL100km: Double? = null,
+    val consumptionExtraUrbanL100km: Double? = null,
+    val consumptionMotorwayL100km: Double? = null,
     val energyKwh100km: Double? = null,
-    val consumptionStandard: ConsumptionStandard? = null,
-    val maxChargingPowerKw: Double? = null,
-    val chargingConnector: String? = null,
+    val energyUrbanKwh100km: Double? = null,
+    val energyExtraUrbanKwh100km: Double? = null,
+    val energyMotorwayKwh100km: Double? = null,
 ) {
-    /** All 27 keys, in schema order, with JSON null for an unknown value. */
+    /** Every schema key, in order, with JSON null for an unknown value. */
     fun toJsonObject(): JsonObject = buildJsonObject {
         put("make", make)
         put("model", model)
@@ -97,19 +94,18 @@ data class VehicleAiPayload(
         put("maxSpeedKph", maxSpeedKph)
         put("lengthM", lengthM)
         put("widthM", widthM)
-        put("widthWithMirrorsM", widthWithMirrorsM)
         put("heightM", heightM)
         put("weightKg", weightKg)
-        put("grossWeightKg", grossWeightKg)
-        put("axleLoadKg", axleLoadKg)
-        put("axleCount", axleCount)
         put("tankL", tankL)
         put("batteryKwh", batteryKwh)
         put("consumptionL100km", consumptionL100km)
+        put("consumptionUrbanL100km", consumptionUrbanL100km)
+        put("consumptionExtraUrbanL100km", consumptionExtraUrbanL100km)
+        put("consumptionMotorwayL100km", consumptionMotorwayL100km)
         put("energyKwh100km", energyKwh100km)
-        put("consumptionStandard", consumptionStandard?.name)
-        put("maxChargingPowerKw", maxChargingPowerKw)
-        put("chargingConnector", chargingConnector)
+        put("energyUrbanKwh100km", energyUrbanKwh100km)
+        put("energyExtraUrbanKwh100km", energyExtraUrbanKwh100km)
+        put("energyMotorwayKwh100km", energyMotorwayKwh100km)
     }
 
     /** The AI-filled fields, in schema order. Identity fields are excluded because the user typed them. */
@@ -129,19 +125,18 @@ data class VehicleAiPayload(
             VehicleAiField.MAX_SPEED_KPH to (maxSpeedKph != null),
             VehicleAiField.LENGTH_M to (lengthM != null),
             VehicleAiField.WIDTH_M to (widthM != null),
-            VehicleAiField.WIDTH_WITH_MIRRORS_M to (widthWithMirrorsM != null),
             VehicleAiField.HEIGHT_M to (heightM != null),
             VehicleAiField.WEIGHT_KG to (weightKg != null),
-            VehicleAiField.GROSS_WEIGHT_KG to (grossWeightKg != null),
-            VehicleAiField.AXLE_LOAD_KG to (axleLoadKg != null),
-            VehicleAiField.AXLE_COUNT to (axleCount != null),
             VehicleAiField.TANK_L to (tankL != null),
             VehicleAiField.BATTERY_KWH to (batteryKwh != null),
             VehicleAiField.CONSUMPTION_L100KM to (consumptionL100km != null),
+            VehicleAiField.CONSUMPTION_URBAN_L100KM to (consumptionUrbanL100km != null),
+            VehicleAiField.CONSUMPTION_EXTRA_URBAN_L100KM to (consumptionExtraUrbanL100km != null),
+            VehicleAiField.CONSUMPTION_MOTORWAY_L100KM to (consumptionMotorwayL100km != null),
             VehicleAiField.ENERGY_KWH100KM to (energyKwh100km != null),
-            VehicleAiField.CONSUMPTION_STANDARD to (consumptionStandard != null),
-            VehicleAiField.MAX_CHARGING_POWER_KW to (maxChargingPowerKw != null),
-            VehicleAiField.CHARGING_CONNECTOR to (chargingConnector != null),
+            VehicleAiField.ENERGY_URBAN_KWH100KM to (energyUrbanKwh100km != null),
+            VehicleAiField.ENERGY_EXTRA_URBAN_KWH100KM to (energyExtraUrbanKwh100km != null),
+            VehicleAiField.ENERGY_MOTORWAY_KWH100KM to (energyMotorwayKwh100km != null),
         )
         return map.filterValues { it }.keys
     }
@@ -155,9 +150,6 @@ data class VehicleAiPayload(
     ) - buildSet {
         if (transmission == null || transmission == Transmission.UNKNOWN) add(VehicleAiField.TRANSMISSION)
         if (drivetrain == null || drivetrain == Drivetrain.UNKNOWN) add(VehicleAiField.DRIVETRAIN)
-        if (consumptionStandard == null || consumptionStandard == ConsumptionStandard.UNKNOWN) {
-            add(VehicleAiField.CONSUMPTION_STANDARD)
-        }
     }
 
     private fun kotlinx.serialization.json.JsonObjectBuilder.put(key: String, value: String?) {
@@ -179,12 +171,13 @@ data class VehicleAiPayload(
 
 /**
  * The one schema shared by every provider. It asks for primary data only. Range, payload,
- * acceleration, CO2, costs, toll class and charging time are derived and stay out.
+ * acceleration, CO2, costs, toll class, charging time and average driver speeds are derived or
+ * behaviour, and stay out.
  */
 object VehicleAiSchema {
     val keys: List<String> = VehicleAiField.entries.map { it.key }
 
-    const val VERSION = 1
+    const val VERSION = 2
 
     /** A readable field list with units and enums for the prompt. */
     val description: String = """
@@ -192,29 +185,28 @@ object VehicleAiSchema {
         model: string
         variant: string (trim, engine or edition name)
         year: integer (model year, 1886 or later)
-        fuelType: one of PETROL, DIESEL, LPG, CNG, HYBRID, PLUG_IN_HYBRID, ELECTRIC, HYDROGEN, OTHER
-        kind: one of CAR, VAN, CAMPER, TRUCK, OTHER
+        fuelType: one of PETROL, DIESEL, LPG, CNG, HYBRID, PLUG_IN_HYBRID, ELECTRIC
+        kind: one of CAR, VAN, CAMPER
         emissionStandard: string (for example "Euro 6d")
         engineDisplacementCc: integer (cubic centimeters)
         powerKw: integer (kilowatts)
-        transmission: one of MANUAL, AUTOMATIC, DCT, CVT, OTHER, UNKNOWN
-        drivetrain: one of FWD, RWD, AWD, OTHER, UNKNOWN
+        transmission: one of MANUAL, AUTOMATIC, UNKNOWN
+        drivetrain: one of FWD, RWD, AWD, UNKNOWN
         maxSpeedKph: integer (kilometers per hour)
         lengthM: number (meters, 3 decimals at most)
         widthM: number (meters, without mirrors)
-        widthWithMirrorsM: number (meters, with mirrors)
         heightM: number (meters)
         weightKg: integer (kilograms, ready to drive without payload)
-        grossWeightKg: integer (kilograms, maximum permitted)
-        axleLoadKg: integer (kilograms, maximum axle load)
-        axleCount: integer
-        tankL: number (liters)
+        tankL: number (liters; null for a battery-only vehicle)
         batteryKwh: number (usable kilowatt hours when known)
-        consumptionL100km: number (liters per 100 km)
-        energyKwh100km: number (kilowatt hours per 100 km)
-        consumptionStandard: one of WLTP, NEDC, EPA, UNKNOWN
-        maxChargingPowerKw: number (kilowatts)
-        chargingConnector: string (for example "Type 2", "CCS2", "CHAdeMO")
+        consumptionL100km: number (liters per 100 km, overall)
+        consumptionUrbanL100km: number (liters per 100 km, urban)
+        consumptionExtraUrbanL100km: number (liters per 100 km, extra-urban)
+        consumptionMotorwayL100km: number (liters per 100 km, motorway)
+        energyKwh100km: number (kilowatt hours per 100 km, overall)
+        energyUrbanKwh100km: number (kilowatt hours per 100 km, urban)
+        energyExtraUrbanKwh100km: number (kilowatt hours per 100 km, extra-urban)
+        energyMotorwayKwh100km: number (kilowatt hours per 100 km, motorway)
     """.trimIndent()
 
     val emptyJson: String = VehicleAiPayload.empty.toJsonObject().toString()

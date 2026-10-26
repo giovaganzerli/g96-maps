@@ -1,6 +1,5 @@
 package app.vela.core.ai
 
-import app.vela.core.model.ConsumptionStandard
 import app.vela.core.model.Drivetrain
 import app.vela.core.model.FuelType
 import app.vela.core.model.Transmission
@@ -37,6 +36,8 @@ class VehicleAiSchemaTest {
         listOf(
             "rangeKm", "electricRangeKm", "payloadKg", "acceleration", "co2Gkm",
             "costPerKm", "tripCost", "tollClass", "chargingTimeMinutes", "eta",
+            "averageSpeedKph", "averageUrbanSpeedKph", "averageExtraUrbanSpeedKph",
+            "averageMotorwaySpeedKph",
         ).forEach { derived -> assertFalse(VehicleAiSchema.keys.contains(derived)) }
     }
 }
@@ -51,11 +52,12 @@ class VehicleAiParserTest {
               "fuelType": "DIESEL", "kind": "CAR", "emissionStandard": "Euro 6d",
               "engineDisplacementCc": 1248, "powerKw": 70, "transmission": "MANUAL",
               "drivetrain": "FWD", "maxSpeedKph": 168, "lengthM": 3.653, "widthM": 1.643,
-              "widthWithMirrorsM": 1.882, "heightM": 1.551, "weightKg": 1055,
-              "grossWeightKg": 1560, "axleLoadKg": 830, "axleCount": 2, "tankL": 38,
-              "batteryKwh": null, "consumptionL100km": 4.2, "energyKwh100km": null,
-              "consumptionStandard": "WLTP", "maxChargingPowerKw": null,
-              "chargingConnector": null, "rangeKm": 900
+              "heightM": 1.551, "weightKg": 1055, "tankL": 38,
+              "batteryKwh": null, "consumptionL100km": 4.2,
+              "consumptionUrbanL100km": 5.1, "consumptionExtraUrbanL100km": 3.7,
+              "consumptionMotorwayL100km": 4.6, "energyKwh100km": null,
+              "energyUrbanKwh100km": null, "energyExtraUrbanKwh100km": null,
+              "energyMotorwayKwh100km": null, "rangeKm": 900
             }
             """.trimIndent(),
         )!!
@@ -71,7 +73,9 @@ class VehicleAiParserTest {
         assertEquals(Transmission.MANUAL, payload.transmission)
         assertEquals(Drivetrain.FWD, payload.drivetrain)
         assertEquals(3.653, payload.lengthM!!, 0.0001)
-        assertEquals(ConsumptionStandard.WLTP, payload.consumptionStandard)
+        assertEquals(5.1, payload.consumptionUrbanL100km!!, 0.0001)
+        assertEquals(3.7, payload.consumptionExtraUrbanL100km!!, 0.0001)
+        assertEquals(4.6, payload.consumptionMotorwayL100km!!, 0.0001)
         assertNull(payload.batteryKwh)
     }
 
@@ -83,7 +87,7 @@ class VehicleAiParserTest {
         assertEquals("Panda", payload.model)
         assertNull(payload.year)
         assertNull(payload.fuelType)
-        assertNull(payload.chargingConnector)
+        assertNull(payload.tankL)
     }
 
     @Test
@@ -105,8 +109,7 @@ class VehicleAiParserTest {
     fun `enums accept local aliases and unknown values become null`() {
         val payload = VehicleAiParser.parse(
             """
-            {"fuelType":"metano","kind":"furgone","transmission":"DSG","drivetrain":"4x4",
-             "consumptionStandard":"sconosciuto"}
+            {"fuelType":"metano","kind":"furgone","transmission":"DSG","drivetrain":"4x4"}
             """.trimIndent(),
         )!!
 
@@ -114,20 +117,19 @@ class VehicleAiParserTest {
         assertEquals(VehicleKind.VAN, payload.kind)
         assertEquals(Transmission.DCT, payload.transmission)
         assertEquals(Drivetrain.AWD, payload.drivetrain)
-        assertEquals(ConsumptionStandard.UNKNOWN, payload.consumptionStandard)
         assertNull(VehicleAiParser.parse("""{"fuelType":"steam"}""")!!.fuelType)
     }
 
     @Test
     fun `an implausible number becomes null`() {
         val payload = VehicleAiParser.parse(
-            """{"year":1200,"powerKw":-4,"lengthM":900,"axleCount":99,"batteryKwh":0}""",
+            """{"year":1200,"powerKw":-4,"lengthM":900,"widthM":0,"batteryKwh":0}""",
         )!!
 
         assertNull(payload.year)
         assertNull(payload.powerKw)
         assertNull(payload.lengthM)
-        assertNull(payload.axleCount)
+        assertNull(payload.widthM)
         assertNull(payload.batteryKwh)
     }
 
@@ -199,6 +201,18 @@ class VehicleAiMergeTest {
             answer.badgeFields,
         )
     }
+
+    @Test
+    fun `a typed variant wins and carries no badge`() {
+        val answer = VehicleAiMerge.merge(
+            criteria.copy(variant = "1.3 Multijet 95 CV"),
+            VehicleAiPayload(kind = VehicleKind.CAR, variant = "Easy"),
+        )
+
+        assertEquals("1.3 Multijet 95 CV", answer.payload.variant)
+        assertTrue(answer.typedVariant)
+        assertFalse(answer.badgeFields.contains(VehicleAiField.VARIANT))
+    }
 }
 
 class PlateRedactorTest {
@@ -225,9 +239,9 @@ class VehicleAiPromptTest {
     private val criteria = VehicleAiCriteria("Fiat", "Panda", 2020, FuelType.PETROL)
 
     @Test
-    fun `the free text is redacted before it reaches the prompt`() {
+    fun `the variant is included in the user prompt`() {
         val redaction = PlateRedactor.redact("Panda targata AB123CD, 1.3 Multijet")
-        val prompt = VehicleAiPrompt.user(criteria, redaction.text)
+        val prompt = VehicleAiPrompt.user(criteria.copy(variant = redaction.text))
 
         assertFalse(prompt.contains("AB123CD"))
         assertTrue(prompt.contains("1.3 Multijet"))

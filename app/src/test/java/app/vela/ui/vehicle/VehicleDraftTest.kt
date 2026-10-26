@@ -50,14 +50,18 @@ class VehicleDraftTest {
         assertFalse(complete.copy(weightKg = "999999").isValid())
         assertFalse(complete.copy(lengthM = "-1").isValid())
         assertFalse(complete.copy(lengthM = "Infinity").isValid())
+        assertFalse(complete.copy(averageSpeedKph = "1001").isValid())
         assertTrue(complete.copy(lengthM = "3,65", powerKw = "70").isValid())
     }
 
     @Test
-    fun `the AI search needs only make model year and fuel`() {
-        val criteria = complete.copy(kind = null).searchCriteria()
+    fun `the AI search needs only make model year fuel and uses the version`() {
+        val criteria = complete.copy(kind = null, variant = "1.3 Multijet").searchCriteria()
 
-        assertEquals(VehicleAiCriteria("Fiat", "Panda", 2020, FuelType.PETROL), criteria)
+        assertEquals(
+            VehicleAiCriteria("Fiat", "Panda", 2020, FuelType.PETROL, "1.3 Multijet"),
+            criteria,
+        )
         assertNull(complete.copy(fuelType = null).searchCriteria())
         assertNull(complete.copy(year = "nope").searchCriteria())
     }
@@ -74,8 +78,17 @@ class VehicleDraftTest {
             engineDisplacementCc = "1248",
             powerKw = "70",
             maxSpeedKph = "168",
+            averageSpeedKph = "62",
+            averageUrbanSpeedKph = "38",
+            averageExtraUrbanSpeedKph = "69",
+            averageMotorwaySpeedKph = "105",
             lengthM = "3,653",
             weightKg = "1055",
+            tankL = "38",
+            consumptionL100km = "4,2",
+            consumptionUrbanL100km = "5,1",
+            consumptionExtraUrbanL100km = "3,7",
+            consumptionMotorwayL100km = "4,6",
             batteryKwh = "40",
             maxChargingPowerKw = "50",
             chargingConnector = "CCS2",
@@ -93,8 +106,71 @@ class VehicleDraftTest {
         assertEquals(ConsumptionStandard.WLTP, profile.consumptionStandard)
         assertEquals(1248, profile.engineDisplacementCc)
         assertEquals(3.653, profile.lengthM!!, 0.0001)
+        assertEquals(62, profile.averageSpeedKph)
+        assertEquals(105, profile.averageMotorwaySpeedKph)
+        assertEquals(4.2, profile.consumptionL100km!!, 0.0001)
+        assertEquals(5.1, profile.consumptionUrbanL100km!!, 0.0001)
+        assertEquals(3.7, profile.consumptionExtraUrbanL100km!!, 0.0001)
+        assertEquals(4.6, profile.consumptionMotorwayL100km!!, 0.0001)
         assertEquals(50.0, profile.maxChargingPowerKw!!, 0.0001)
         assertEquals("CCS2", profile.chargingConnector)
+    }
+
+    @Test
+    fun `fuel decides which energy fields apply`() {
+        assertTrue(FuelType.DIESEL.usesTank())
+        assertFalse(FuelType.DIESEL.usesBattery())
+        assertTrue(FuelType.DIESEL.usesFuelConsumption())
+        assertFalse(FuelType.DIESEL.usesElectricConsumption())
+
+        assertFalse(FuelType.ELECTRIC.usesTank())
+        assertTrue(FuelType.ELECTRIC.usesBattery())
+        assertFalse(FuelType.ELECTRIC.usesFuelConsumption())
+        assertTrue(FuelType.ELECTRIC.usesElectricConsumption())
+
+        assertTrue(FuelType.HYBRID.usesTank())
+        assertTrue(FuelType.HYBRID.usesBattery())
+        assertTrue(FuelType.HYBRID.usesFuelConsumption())
+        assertFalse(FuelType.HYBRID.usesElectricConsumption())
+
+        assertTrue(FuelType.PLUG_IN_HYBRID.usesTank())
+        assertTrue(FuelType.PLUG_IN_HYBRID.usesBattery())
+        assertTrue(FuelType.PLUG_IN_HYBRID.usesFuelConsumption())
+        assertTrue(FuelType.PLUG_IN_HYBRID.usesElectricConsumption())
+    }
+
+    @Test
+    fun `changing fuel clears the fields that no longer apply`() {
+        val diesel = complete.copy(
+            fuelType = FuelType.DIESEL,
+            engineDisplacementCc = "1248",
+            emissionStandard = "Euro 6d",
+            tankL = "45",
+            consumptionL100km = "4.5",
+            consumptionUrbanL100km = "5.4",
+            batteryKwh = "20",
+            energyKwh100km = "15",
+            energyUrbanKwh100km = "14",
+        )
+
+        val electric = diesel.withFuel(FuelType.ELECTRIC)
+
+        assertEquals("", electric.engineDisplacementCc)
+        assertEquals("", electric.emissionStandard)
+        assertEquals("", electric.tankL)
+        assertEquals("", electric.consumptionL100km)
+        assertEquals("", electric.consumptionUrbanL100km)
+        assertEquals("20", electric.batteryKwh)
+        assertEquals("15", electric.energyKwh100km)
+        assertEquals("14", electric.energyUrbanKwh100km)
+        assertTrue(diesel.clearedByFuel(FuelType.ELECTRIC).contains(VehicleAiField.TANK_L))
+        assertTrue(diesel.clearedByFuel(FuelType.ELECTRIC).contains(VehicleAiField.EMISSION_STANDARD))
+
+        val hybrid = diesel.copy(batteryKwh = "12", energyKwh100km = "18")
+            .withFuel(FuelType.PLUG_IN_HYBRID)
+        assertEquals("45", hybrid.tankL)
+        assertEquals("12", hybrid.batteryKwh)
+        assertEquals("18", hybrid.energyKwh100km)
     }
 
     @Test
@@ -115,7 +191,7 @@ class VehicleDraftTest {
 
     @Test
     fun `an AI draft uses the typed identity and local plate`() {
-        val criteria = VehicleAiCriteria("Fiat", "Panda", 2020, FuelType.PETROL)
+        val criteria = VehicleAiCriteria("Fiat", "Panda", 2020, FuelType.PETROL, "1.3 Multijet")
         val payload = VehicleAiPayload(
             make = "Volkswagen",
             model = "Golf",
@@ -125,7 +201,11 @@ class VehicleDraftTest {
             kind = VehicleKind.CAR,
             powerKw = 70,
             transmission = Transmission.MANUAL,
-            consumptionStandard = ConsumptionStandard.WLTP,
+            tankL = 38.0,
+            consumptionL100km = 4.2,
+            consumptionUrbanL100km = 5.1,
+            consumptionExtraUrbanL100km = 3.7,
+            consumptionMotorwayL100km = 4.6,
         )
 
         val draft = VehicleDraft.fromAi(criteria, payload, plate = "AB123CD")
@@ -139,16 +219,66 @@ class VehicleDraftTest {
         assertEquals("1.3 Multijet", draft.variant)
         assertEquals("70", draft.powerKw)
         assertEquals(Transmission.MANUAL, draft.transmission)
-        assertEquals(ConsumptionStandard.WLTP, draft.consumptionStandard)
+        assertEquals("38", draft.tankL)
+        assertEquals(formatNumber(5.1), draft.consumptionUrbanL100km)
         assertEquals(
             setOf(
                 VehicleAiField.VARIANT,
                 VehicleAiField.KIND,
                 VehicleAiField.POWER_KW,
                 VehicleAiField.TRANSMISSION,
-                VehicleAiField.CONSUMPTION_STANDARD,
+                VehicleAiField.TANK_L,
+                VehicleAiField.CONSUMPTION_L100KM,
+                VehicleAiField.CONSUMPTION_URBAN_L100KM,
+                VehicleAiField.CONSUMPTION_EXTRA_URBAN_L100KM,
+                VehicleAiField.CONSUMPTION_MOTORWAY_L100KM,
             ),
             payload.aiBadgeFields(),
         )
+    }
+
+    @Test
+    fun `AI data for a fuel-incompatible field is dropped`() {
+        val criteria = VehicleAiCriteria("Tesla", "Model 3", 2024, FuelType.ELECTRIC)
+        val payload = VehicleAiPayload(
+            kind = VehicleKind.CAR,
+            engineDisplacementCc = 1998,
+            emissionStandard = "Euro 6d",
+            tankL = 50.0,
+            consumptionL100km = 6.0,
+            batteryKwh = 60.0,
+            energyKwh100km = 15.0,
+            energyUrbanKwh100km = 14.0,
+        )
+
+        val draft = VehicleDraft.fromAi(criteria, payload)
+
+        assertEquals("", draft.engineDisplacementCc)
+        assertEquals("", draft.emissionStandard)
+        assertEquals("", draft.tankL)
+        assertEquals("", draft.consumptionL100km)
+        assertEquals("60", draft.batteryKwh)
+        assertEquals("15", draft.energyKwh100km)
+        assertEquals("14", draft.energyUrbanKwh100km)
+        assertEquals(
+            setOf(
+                VehicleAiField.KIND,
+                VehicleAiField.BATTERY_KWH,
+                VehicleAiField.ENERGY_KWH100KM,
+                VehicleAiField.ENERGY_URBAN_KWH100KM,
+            ),
+            draft.aiBadges(payload.aiBadgeFields()),
+        )
+    }
+
+    @Test
+    fun `a known AI emission value is normalized to the chip list`() {
+        val criteria = VehicleAiCriteria("Fiat", "Panda", 2020, FuelType.DIESEL)
+        val draft = VehicleDraft.fromAi(
+            criteria,
+            VehicleAiPayload(emissionStandard = "euro 6d-temp"),
+        )
+
+        assertEquals("Euro 6d-TEMP", draft.emissionStandard)
     }
 }

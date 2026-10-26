@@ -1,6 +1,5 @@
 package app.vela.core.ai
 
-import app.vela.core.model.ConsumptionStandard
 import app.vela.core.model.Drivetrain
 import app.vela.core.model.FuelType
 import app.vela.core.model.Transmission
@@ -42,19 +41,18 @@ object VehicleAiParser {
             maxSpeedKph = source.int("maxSpeedKph", 1, 1_000),
             lengthM = source.double("lengthM", 0.5, 30.0),
             widthM = source.double("widthM", 0.5, 30.0),
-            widthWithMirrorsM = source.double("widthWithMirrorsM", 0.5, 30.0),
             heightM = source.double("heightM", 0.5, 30.0),
             weightKg = source.int("weightKg", 1, 100_000),
-            grossWeightKg = source.int("grossWeightKg", 1, 100_000),
-            axleLoadKg = source.int("axleLoadKg", 1, 100_000),
-            axleCount = source.int("axleCount", 1, 10),
             tankL = source.double("tankL", 1.0, 2_000.0),
             batteryKwh = source.double("batteryKwh", 0.1, 2_000.0),
             consumptionL100km = source.double("consumptionL100km", 0.1, 100.0),
+            consumptionUrbanL100km = source.double("consumptionUrbanL100km", 0.1, 100.0),
+            consumptionExtraUrbanL100km = source.double("consumptionExtraUrbanL100km", 0.1, 100.0),
+            consumptionMotorwayL100km = source.double("consumptionMotorwayL100km", 0.1, 100.0),
             energyKwh100km = source.double("energyKwh100km", 0.1, 200.0),
-            consumptionStandard = source.enum("consumptionStandard", ::consumptionStandard),
-            maxChargingPowerKw = source.double("maxChargingPowerKw", 0.1, 2_000.0),
-            chargingConnector = source.string("chargingConnector", 40),
+            energyUrbanKwh100km = source.double("energyUrbanKwh100km", 0.1, 200.0),
+            energyExtraUrbanKwh100km = source.double("energyExtraUrbanKwh100km", 0.1, 200.0),
+            energyMotorwayKwh100km = source.double("energyMotorwayKwh100km", 0.1, 200.0),
         )
     }
 
@@ -136,14 +134,6 @@ object VehicleAiParser {
         "AWD", "4WD", "ALL_WHEEL_DRIVE", "4X4", "INTEGRALE", "TRAZIONE_INTEGRALE" -> Drivetrain.AWD
         "OTHER", "ALTRO" -> Drivetrain.OTHER
         "UNKNOWN", "SCONOSCIUTO" -> Drivetrain.UNKNOWN
-        else -> null
-    }
-
-    private fun consumptionStandard(raw: String?): ConsumptionStandard? = when (normalize(raw)) {
-        "WLTP" -> ConsumptionStandard.WLTP
-        "NEDC" -> ConsumptionStandard.NEDC
-        "EPA" -> ConsumptionStandard.EPA
-        "UNKNOWN", "SCONOSCIUTO", "ND" -> ConsumptionStandard.UNKNOWN
         else -> null
     }
 

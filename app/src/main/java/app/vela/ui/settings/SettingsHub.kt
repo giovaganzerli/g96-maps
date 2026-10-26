@@ -407,8 +407,12 @@ private val SEARCH_INDEX: List<Pair<Int, SettingsSection>> = listOf(
     R.string.settings_vehicle_year to SettingsSection.VEHICLES,
     R.string.settings_vehicle_plate to SettingsSection.VEHICLES,
     R.string.settings_vehicle_dimensions to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_engine_cc to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_emission_standard to SettingsSection.VEHICLES,
     R.string.settings_vehicle_consumption to SettingsSection.VEHICLES,
-    R.string.settings_vehicle_routing to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_speed to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_tank to SettingsSection.VEHICLES,
+    R.string.settings_vehicle_battery to SettingsSection.VEHICLES,
     // AI
     R.string.settings_ai to SettingsSection.AI,
     R.string.settings_ai_provider to SettingsSection.AI,

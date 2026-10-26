@@ -83,12 +83,12 @@ class VehicleSettingsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) { store.setActive(id) }
     }
 
-    fun search(criteria: VehicleAiCriteria, query: String) {
+    fun search(criteria: VehicleAiCriteria) {
         if (_search.value is VehicleAiSearchState.Loading) return
         searchJob?.cancel()
         _search.value = VehicleAiSearchState.Loading
         searchJob = viewModelScope.launch {
-            val outcome = withContext(Dispatchers.IO) { ai.search(criteria, query) }
+            val outcome = withContext(Dispatchers.IO) { ai.search(criteria) }
             _search.value = when (outcome) {
                 is AiSearchOutcome.Success -> VehicleAiSearchState.Success(outcome.provider, outcome.answer)
                 is AiSearchOutcome.NoProvider -> VehicleAiSearchState.NoProvider

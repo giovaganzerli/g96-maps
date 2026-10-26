@@ -27,13 +27,11 @@ import androidx.compose.ui.unit.dp
 import app.vela.R
 import app.vela.core.ai.VehicleAiField
 import app.vela.core.ai.VehicleAiIdentityField
-import app.vela.core.model.ConsumptionStandard
 import app.vela.core.model.Drivetrain
 import app.vela.core.model.FuelType
 import app.vela.core.model.Transmission
 import app.vela.core.model.VehicleKind
 import app.vela.core.model.VehicleProfile
-import app.vela.core.model.VehicleRoutingMode
 import app.vela.ui.dpadFieldEscape
 import app.vela.ui.dpadHighlight
 import app.vela.ui.settings.Hint
@@ -66,6 +64,12 @@ internal fun VehicleEditorScreen(
         badges = badgesAfterEdit(badges, field)
     }
 
+    fun changeFuel(fuel: FuelType) {
+        val cleared = draft.clearedByFuel(fuel)
+        draft = draft.withFuel(fuel)
+        badges = badges - cleared
+    }
+
     SettingsScaffold(
         stringResource(if (target.isNew) R.string.settings_vehicle_new_title else R.string.settings_vehicle_edit_title),
         onBack,
@@ -79,24 +83,25 @@ internal fun VehicleEditorScreen(
             VehicleField(
                 value = draft.make,
                 onValueChange = { draft = draft.copy(make = it) },
-                label = stringResource(R.string.settings_vehicle_make),
+                label = requiredLabel(stringResource(R.string.settings_vehicle_make)),
                 modifier = topRow,
             )
             VehicleField(
                 value = draft.model,
                 onValueChange = { draft = draft.copy(model = it) },
-                label = stringResource(R.string.settings_vehicle_model),
+                label = requiredLabel(stringResource(R.string.settings_vehicle_model)),
             )
             VehicleField(
                 value = draft.variant,
                 onValueChange = { change(VehicleAiField.VARIANT) { d -> d.copy(variant = it) } },
                 label = stringResource(R.string.settings_vehicle_variant),
+                placeholder = stringResource(R.string.settings_vehicle_variant_hint),
                 badge = VehicleAiField.VARIANT in badges,
             )
             VehicleField(
                 value = draft.year,
                 onValueChange = { draft = draft.copy(year = it) },
-                label = stringResource(R.string.settings_vehicle_year),
+                label = requiredLabel(stringResource(R.string.settings_vehicle_year)),
                 numeric = true,
                 integer = true,
             )
@@ -106,49 +111,32 @@ internal fun VehicleEditorScreen(
                 label = stringResource(R.string.settings_vehicle_plate),
                 placeholder = stringResource(R.string.settings_vehicle_plate_hint),
             )
-        }
-
-        Spacer(Modifier.height(8.dp))
-        SettingsGroup(title = groupTitle(stringResource(R.string.settings_vehicle_kind), VehicleAiField.KIND in badges)) {
+            SettingsGroupHeader(
+                title = groupTitle(
+                    requiredLabel(stringResource(R.string.settings_vehicle_kind)),
+                    VehicleAiField.KIND in badges,
+                ),
+            )
             ChoiceChips(
-                options = VehicleKind.entries.map { it to kindLabel(it) },
+                options = kindOptions(draft.kind),
                 selected = draft.kind,
                 onSelected = { value -> change(VehicleAiField.KIND) { d -> d.copy(kind = value) } },
             )
         }
 
         Spacer(Modifier.height(8.dp))
-        SettingsGroup(title = stringResource(R.string.settings_vehicle_fuel)) {
-            ChoiceChips(
-                options = FuelType.entries.map { it to fuelLabel(it) },
-                selected = draft.fuelType,
-                onSelected = { value -> draft = draft.copy(fuelType = value) },
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-        SettingsGroup(title = stringResource(R.string.settings_vehicle_routing)) {
-            ChoiceChips(
-                options = listOf(
-                    VehicleRoutingMode.AUTO to stringResource(R.string.settings_vehicle_routing_auto),
-                    VehicleRoutingMode.TRUCK to stringResource(R.string.settings_vehicle_routing_truck),
-                ),
-                selected = draft.routingMode,
-                onSelected = { draft = draft.copy(routingMode = it) },
-            )
-            Hint(stringResource(R.string.settings_vehicle_routing_hint))
-        }
-
-        Spacer(Modifier.height(8.dp))
         SettingsGroup(title = stringResource(R.string.settings_vehicle_technical)) {
-            VehicleField(
-                value = draft.engineDisplacementCc,
-                onValueChange = { change(VehicleAiField.ENGINE_DISPLACEMENT_CC) { d -> d.copy(engineDisplacementCc = it) } },
-                label = stringResource(R.string.settings_vehicle_engine_cc),
-                numeric = true,
-                integer = true,
-                badge = VehicleAiField.ENGINE_DISPLACEMENT_CC in badges,
-            )
+            val fuel = draft.fuelType
+            if (fuel == null || fuel.usesEngineDisplacement()) {
+                VehicleField(
+                    value = draft.engineDisplacementCc,
+                    onValueChange = { change(VehicleAiField.ENGINE_DISPLACEMENT_CC) { d -> d.copy(engineDisplacementCc = it) } },
+                    label = stringResource(R.string.settings_vehicle_engine_cc),
+                    numeric = true,
+                    integer = true,
+                    badge = VehicleAiField.ENGINE_DISPLACEMENT_CC in badges,
+                )
+            }
             VehicleField(
                 value = draft.powerKw,
                 onValueChange = { change(VehicleAiField.POWER_KW) { d -> d.copy(powerKw = it) } },
@@ -157,20 +145,29 @@ internal fun VehicleEditorScreen(
                 integer = true,
                 badge = VehicleAiField.POWER_KW in badges,
             )
-            VehicleField(
-                value = draft.emissionStandard,
-                onValueChange = { change(VehicleAiField.EMISSION_STANDARD) { d -> d.copy(emissionStandard = it) } },
-                label = stringResource(R.string.settings_vehicle_emission_standard),
-                badge = VehicleAiField.EMISSION_STANDARD in badges,
+            SettingsGroupHeader(
+                title = requiredLabel(stringResource(R.string.settings_vehicle_fuel)),
             )
-            VehicleField(
-                value = draft.maxSpeedKph,
-                onValueChange = { change(VehicleAiField.MAX_SPEED_KPH) { d -> d.copy(maxSpeedKph = it) } },
-                label = stringResource(R.string.settings_vehicle_max_speed),
-                numeric = true,
-                integer = true,
-                badge = VehicleAiField.MAX_SPEED_KPH in badges,
+            ChoiceChips(
+                options = fuelOptions(draft.fuelType),
+                selected = draft.fuelType,
+                onSelected = { fuel -> changeFuel(fuel) },
             )
+            if (fuel == null || fuel.usesEmissionStandard()) {
+                SettingsGroupHeader(
+                    title = groupTitle(
+                        stringResource(R.string.settings_vehicle_emission_standard),
+                        VehicleAiField.EMISSION_STANDARD in badges,
+                    ),
+                )
+                ChoiceChips(
+                    options = emissionOptions(draft.emissionStandard),
+                    selected = draft.emissionStandard,
+                    onSelected = { value ->
+                        change(VehicleAiField.EMISSION_STANDARD) { d -> d.copy(emissionStandard = value) }
+                    },
+                )
+            }
             SettingsGroupHeader(
                 title = groupTitle(
                     stringResource(R.string.settings_vehicle_transmission),
@@ -178,7 +175,11 @@ internal fun VehicleEditorScreen(
                 ),
             )
             ChoiceChips(
-                options = Transmission.entries.map { it to transmissionLabel(it) },
+                options = listOf(
+                    Transmission.MANUAL to transmissionLabel(Transmission.MANUAL),
+                    Transmission.AUTOMATIC to transmissionLabel(Transmission.AUTOMATIC),
+                    Transmission.UNKNOWN to transmissionLabel(Transmission.UNKNOWN),
+                ),
                 selected = draft.transmission,
                 onSelected = { value -> change(VehicleAiField.TRANSMISSION) { d -> d.copy(transmission = value) } },
             )
@@ -189,7 +190,12 @@ internal fun VehicleEditorScreen(
                 ),
             )
             ChoiceChips(
-                options = Drivetrain.entries.map { it to drivetrainLabel(it) },
+                options = listOf(
+                    Drivetrain.FWD to drivetrainLabel(Drivetrain.FWD),
+                    Drivetrain.RWD to drivetrainLabel(Drivetrain.RWD),
+                    Drivetrain.AWD to drivetrainLabel(Drivetrain.AWD),
+                    Drivetrain.UNKNOWN to drivetrainLabel(Drivetrain.UNKNOWN),
+                ),
                 selected = draft.drivetrain,
                 onSelected = { value -> change(VehicleAiField.DRIVETRAIN) { d -> d.copy(drivetrain = value) } },
             )
@@ -198,11 +204,11 @@ internal fun VehicleEditorScreen(
         Spacer(Modifier.height(8.dp))
         SettingsGroup(title = stringResource(R.string.settings_vehicle_dimensions)) {
             VehicleField(
-                value = draft.heightM,
-                onValueChange = { change(VehicleAiField.HEIGHT_M) { d -> d.copy(heightM = it) } },
-                label = stringResource(R.string.settings_vehicle_height),
+                value = draft.lengthM,
+                onValueChange = { change(VehicleAiField.LENGTH_M) { d -> d.copy(lengthM = it) } },
+                label = stringResource(R.string.settings_vehicle_length),
                 numeric = true,
-                badge = VehicleAiField.HEIGHT_M in badges,
+                badge = VehicleAiField.LENGTH_M in badges,
             )
             VehicleField(
                 value = draft.widthM,
@@ -212,18 +218,11 @@ internal fun VehicleEditorScreen(
                 badge = VehicleAiField.WIDTH_M in badges,
             )
             VehicleField(
-                value = draft.widthWithMirrorsM,
-                onValueChange = { change(VehicleAiField.WIDTH_WITH_MIRRORS_M) { d -> d.copy(widthWithMirrorsM = it) } },
-                label = stringResource(R.string.settings_vehicle_width_mirrors),
+                value = draft.heightM,
+                onValueChange = { change(VehicleAiField.HEIGHT_M) { d -> d.copy(heightM = it) } },
+                label = stringResource(R.string.settings_vehicle_height),
                 numeric = true,
-                badge = VehicleAiField.WIDTH_WITH_MIRRORS_M in badges,
-            )
-            VehicleField(
-                value = draft.lengthM,
-                onValueChange = { change(VehicleAiField.LENGTH_M) { d -> d.copy(lengthM = it) } },
-                label = stringResource(R.string.settings_vehicle_length),
-                numeric = true,
-                badge = VehicleAiField.LENGTH_M in badges,
+                badge = VehicleAiField.HEIGHT_M in badges,
             )
             VehicleField(
                 value = draft.weightKg,
@@ -233,102 +232,154 @@ internal fun VehicleEditorScreen(
                 integer = true,
                 badge = VehicleAiField.WEIGHT_KG in badges,
             )
-            VehicleField(
-                value = draft.grossWeightKg,
-                onValueChange = { change(VehicleAiField.GROSS_WEIGHT_KG) { d -> d.copy(grossWeightKg = it) } },
-                label = stringResource(R.string.settings_vehicle_gross_weight),
-                numeric = true,
-                integer = true,
-                badge = VehicleAiField.GROSS_WEIGHT_KG in badges,
-            )
-            VehicleField(
-                value = draft.axleLoadKg,
-                onValueChange = { change(VehicleAiField.AXLE_LOAD_KG) { d -> d.copy(axleLoadKg = it) } },
-                label = stringResource(R.string.settings_vehicle_axle_load),
-                numeric = true,
-                integer = true,
-                badge = VehicleAiField.AXLE_LOAD_KG in badges,
-            )
-            VehicleField(
-                value = draft.axleCount,
-                onValueChange = { change(VehicleAiField.AXLE_COUNT) { d -> d.copy(axleCount = it) } },
-                label = stringResource(R.string.settings_vehicle_axles),
-                numeric = true,
-                integer = true,
-                badge = VehicleAiField.AXLE_COUNT in badges,
-            )
         }
 
         Spacer(Modifier.height(8.dp))
         SettingsGroup(title = stringResource(R.string.settings_vehicle_consumption)) {
-            VehicleField(
-                value = draft.consumptionL100km,
-                onValueChange = { change(VehicleAiField.CONSUMPTION_L100KM) { d -> d.copy(consumptionL100km = it) } },
-                label = stringResource(R.string.settings_vehicle_consumption_l100),
-                numeric = true,
-                badge = VehicleAiField.CONSUMPTION_L100KM in badges,
-            )
-            VehicleField(
-                value = draft.energyKwh100km,
-                onValueChange = { change(VehicleAiField.ENERGY_KWH100KM) { d -> d.copy(energyKwh100km = it) } },
-                label = stringResource(R.string.settings_vehicle_consumption_kwh),
-                numeric = true,
-                badge = VehicleAiField.ENERGY_KWH100KM in badges,
-            )
-            VehicleField(
-                value = draft.batteryKwh,
-                onValueChange = { change(VehicleAiField.BATTERY_KWH) { d -> d.copy(batteryKwh = it) } },
-                label = stringResource(R.string.settings_vehicle_battery),
-                numeric = true,
-                badge = VehicleAiField.BATTERY_KWH in badges,
-            )
-            VehicleField(
-                value = draft.tankL,
-                onValueChange = { change(VehicleAiField.TANK_L) { d -> d.copy(tankL = it) } },
-                label = stringResource(R.string.settings_vehicle_tank),
-                numeric = true,
-                badge = VehicleAiField.TANK_L in badges,
-            )
-            SettingsGroupHeader(
-                title = groupTitle(
-                    stringResource(R.string.settings_vehicle_consumption_standard),
-                    VehicleAiField.CONSUMPTION_STANDARD in badges,
-                ),
-            )
-            ChoiceChips(
-                options = ConsumptionStandard.entries.map { it to consumptionStandardLabel(it) },
-                selected = draft.consumptionStandard,
-                onSelected = { value ->
-                    change(VehicleAiField.CONSUMPTION_STANDARD) { d -> d.copy(consumptionStandard = value) }
-                },
-            )
+            val fuel = draft.fuelType
+            if (fuel == null) {
+                Hint(stringResource(R.string.settings_vehicle_fuel_fields_hint))
+            } else {
+                if (fuel.usesTank()) {
+                    VehicleField(
+                        value = draft.tankL,
+                        onValueChange = { change(VehicleAiField.TANK_L) { d -> d.copy(tankL = it) } },
+                        label = stringResource(R.string.settings_vehicle_tank),
+                        numeric = true,
+                        badge = VehicleAiField.TANK_L in badges,
+                    )
+                }
+                if (fuel.usesBattery()) {
+                    VehicleField(
+                        value = draft.batteryKwh,
+                        onValueChange = { change(VehicleAiField.BATTERY_KWH) { d -> d.copy(batteryKwh = it) } },
+                        label = stringResource(R.string.settings_vehicle_battery),
+                        numeric = true,
+                        badge = VehicleAiField.BATTERY_KWH in badges,
+                    )
+                }
+                if (fuel.usesFuelConsumption()) {
+                    SettingsGroupHeader(title = stringResource(R.string.settings_vehicle_fuel_consumption))
+                    VehicleField(
+                        value = draft.consumptionL100km,
+                        onValueChange = { change(VehicleAiField.CONSUMPTION_L100KM) { d -> d.copy(consumptionL100km = it) } },
+                        label = stringResource(R.string.settings_vehicle_consumption_l100),
+                        numeric = true,
+                        badge = VehicleAiField.CONSUMPTION_L100KM in badges,
+                    )
+                    VehicleField(
+                        value = draft.consumptionUrbanL100km,
+                        onValueChange = {
+                            change(VehicleAiField.CONSUMPTION_URBAN_L100KM) { d -> d.copy(consumptionUrbanL100km = it) }
+                        },
+                        label = stringResource(R.string.settings_vehicle_consumption_urban),
+                        numeric = true,
+                        badge = VehicleAiField.CONSUMPTION_URBAN_L100KM in badges,
+                    )
+                    VehicleField(
+                        value = draft.consumptionExtraUrbanL100km,
+                        onValueChange = {
+                            change(VehicleAiField.CONSUMPTION_EXTRA_URBAN_L100KM) { d ->
+                                d.copy(consumptionExtraUrbanL100km = it)
+                            }
+                        },
+                        label = stringResource(R.string.settings_vehicle_consumption_extra_urban),
+                        numeric = true,
+                        badge = VehicleAiField.CONSUMPTION_EXTRA_URBAN_L100KM in badges,
+                    )
+                    VehicleField(
+                        value = draft.consumptionMotorwayL100km,
+                        onValueChange = {
+                            change(VehicleAiField.CONSUMPTION_MOTORWAY_L100KM) { d ->
+                                d.copy(consumptionMotorwayL100km = it)
+                            }
+                        },
+                        label = stringResource(R.string.settings_vehicle_consumption_motorway),
+                        numeric = true,
+                        badge = VehicleAiField.CONSUMPTION_MOTORWAY_L100KM in badges,
+                    )
+                }
+                if (fuel.usesElectricConsumption()) {
+                    SettingsGroupHeader(title = stringResource(R.string.settings_vehicle_electric_consumption))
+                    VehicleField(
+                        value = draft.energyKwh100km,
+                        onValueChange = { change(VehicleAiField.ENERGY_KWH100KM) { d -> d.copy(energyKwh100km = it) } },
+                        label = stringResource(R.string.settings_vehicle_consumption_kwh),
+                        numeric = true,
+                        badge = VehicleAiField.ENERGY_KWH100KM in badges,
+                    )
+                    VehicleField(
+                        value = draft.energyUrbanKwh100km,
+                        onValueChange = {
+                            change(VehicleAiField.ENERGY_URBAN_KWH100KM) { d -> d.copy(energyUrbanKwh100km = it) }
+                        },
+                        label = stringResource(R.string.settings_vehicle_energy_urban),
+                        numeric = true,
+                        badge = VehicleAiField.ENERGY_URBAN_KWH100KM in badges,
+                    )
+                    VehicleField(
+                        value = draft.energyExtraUrbanKwh100km,
+                        onValueChange = {
+                            change(VehicleAiField.ENERGY_EXTRA_URBAN_KWH100KM) { d ->
+                                d.copy(energyExtraUrbanKwh100km = it)
+                            }
+                        },
+                        label = stringResource(R.string.settings_vehicle_energy_extra_urban),
+                        numeric = true,
+                        badge = VehicleAiField.ENERGY_EXTRA_URBAN_KWH100KM in badges,
+                    )
+                    VehicleField(
+                        value = draft.energyMotorwayKwh100km,
+                        onValueChange = {
+                            change(VehicleAiField.ENERGY_MOTORWAY_KWH100KM) { d ->
+                                d.copy(energyMotorwayKwh100km = it)
+                            }
+                        },
+                        label = stringResource(R.string.settings_vehicle_energy_motorway),
+                        numeric = true,
+                        badge = VehicleAiField.ENERGY_MOTORWAY_KWH100KM in badges,
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(8.dp))
-        SettingsGroup(title = stringResource(R.string.settings_vehicle_energy)) {
+        SettingsGroup(title = stringResource(R.string.settings_vehicle_speed)) {
             VehicleField(
-                value = draft.maxChargingPowerKw,
-                onValueChange = { change(VehicleAiField.MAX_CHARGING_POWER_KW) { d -> d.copy(maxChargingPowerKw = it) } },
-                label = stringResource(R.string.settings_vehicle_max_charging),
+                value = draft.averageSpeedKph,
+                onValueChange = { draft = draft.copy(averageSpeedKph = it) },
+                label = stringResource(R.string.settings_vehicle_average_speed),
                 numeric = true,
-                badge = VehicleAiField.MAX_CHARGING_POWER_KW in badges,
+                integer = true,
             )
             VehicleField(
-                value = draft.chargingConnector,
-                onValueChange = { change(VehicleAiField.CHARGING_CONNECTOR) { d -> d.copy(chargingConnector = it) } },
-                label = stringResource(R.string.settings_vehicle_connector),
-                placeholder = stringResource(R.string.settings_vehicle_connector_hint),
-                badge = VehicleAiField.CHARGING_CONNECTOR in badges,
+                value = draft.averageUrbanSpeedKph,
+                onValueChange = { draft = draft.copy(averageUrbanSpeedKph = it) },
+                label = stringResource(R.string.settings_vehicle_average_urban_speed),
+                numeric = true,
+                integer = true,
             )
-        }
-
-        Spacer(Modifier.height(8.dp))
-        SettingsGroup(title = stringResource(R.string.settings_vehicle_notes)) {
             VehicleField(
-                value = draft.notes,
-                onValueChange = { draft = draft.copy(notes = it) },
-                label = stringResource(R.string.settings_vehicle_notes),
-                singleLine = false,
+                value = draft.averageExtraUrbanSpeedKph,
+                onValueChange = { draft = draft.copy(averageExtraUrbanSpeedKph = it) },
+                label = stringResource(R.string.settings_vehicle_average_extra_urban_speed),
+                numeric = true,
+                integer = true,
+            )
+            VehicleField(
+                value = draft.averageMotorwaySpeedKph,
+                onValueChange = { draft = draft.copy(averageMotorwaySpeedKph = it) },
+                label = stringResource(R.string.settings_vehicle_average_motorway_speed),
+                numeric = true,
+                integer = true,
+            )
+            VehicleField(
+                value = draft.maxSpeedKph,
+                onValueChange = { change(VehicleAiField.MAX_SPEED_KPH) { d -> d.copy(maxSpeedKph = it) } },
+                label = stringResource(R.string.settings_vehicle_max_speed),
+                numeric = true,
+                integer = true,
+                badge = VehicleAiField.MAX_SPEED_KPH in badges,
             )
         }
 
@@ -344,6 +395,27 @@ internal fun VehicleEditorScreen(
         Hint(stringResource(R.string.settings_vehicle_plate_privacy))
         Spacer(Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun kindOptions(selected: VehicleKind?): List<Pair<VehicleKind, String>> {
+    val values = VEHICLE_KINDS.toMutableList()
+    if (selected != null && selected !in values) values += selected
+    return values.map { it to kindLabel(it) }
+}
+
+@Composable
+private fun fuelOptions(selected: FuelType?): List<Pair<FuelType, String>> {
+    val values = VEHICLE_FUELS.toMutableList()
+    if (selected != null && selected !in values) values += selected
+    return values.map { it to fuelLabel(it) }
+}
+
+@Composable
+private fun emissionOptions(selected: String): List<Pair<String, String>> {
+    val values = VEHICLE_EMISSION_STANDARDS.toMutableList()
+    if (selected.isNotBlank() && selected !in values) values += selected
+    return values.map { it to it } + ("" to stringResource(R.string.settings_vehicle_emission_unknown))
 }
 
 /** A group heading inside an existing [SettingsGroup] (the enum chip fields). */

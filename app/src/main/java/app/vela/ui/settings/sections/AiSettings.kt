@@ -1,5 +1,6 @@
 package app.vela.ui.settings.sections
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,10 +13,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +48,10 @@ import app.vela.ui.vehicle.VehicleField
 import app.vela.ui.vehicle.VehicleSettingsViewModel
 import app.vela.ui.vehicle.aiProviderLabel
 
+/** A fixed mask, so the saved key never reappears in the field or leaks its length. */
+private const val SAVED_KEY_MASK = "••••••••••••"
+private const val MASK_CHAR = '•'
+
 @Composable
 internal fun AiSettingsScreen(
     onBack: () -> Unit,
@@ -60,10 +65,20 @@ internal fun AiSettingsScreen(
     var selected by remember(active) { mutableStateOf(active) }
     var model by remember(selected, settings) { mutableStateOf(selected?.let { settings.config(it).model }.orEmpty()) }
     var key by remember(selected) { mutableStateOf("") }
+    var replacingKey by remember(selected) { mutableStateOf(false) }
     val hasKey = selected?.let { settings.config(it).hasKey } == true
 
     LaunchedEffect(save) {
-        if (save is AiSaveState.Saved) key = ""
+        if (save is AiSaveState.Saved) {
+            key = ""
+            replacingKey = false
+        }
+    }
+    LaunchedEffect(hasKey) {
+        if (!hasKey) {
+            key = ""
+            replacingKey = false
+        }
     }
 
     SettingsScaffold(stringResource(R.string.settings_ai), onBack) { topRow ->
@@ -107,9 +122,14 @@ internal fun AiSettingsScreen(
                     placeholder = stringResource(R.string.settings_ai_model_hint),
                 )
                 OutlinedTextField(
-                    value = key,
-                    onValueChange = {
-                        key = it
+                    value = if (hasKey && !replacingKey) SAVED_KEY_MASK else key,
+                    onValueChange = { newValue ->
+                        if (hasKey && !replacingKey) {
+                            replacingKey = true
+                            key = newValue.filterNot { it == MASK_CHAR }
+                        } else {
+                            key = newValue
+                        }
                         vm.consumeSaveState()
                         vm.consumeVerifyState()
                     },
@@ -122,7 +142,7 @@ internal fun AiSettingsScreen(
                     colors = settingsFieldColors(),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).dpadFieldEscape(),
                 )
-                if (key.isNotBlank()) {
+                if (replacingKey) {
                     Hint(stringResource(R.string.settings_ai_key_unsaved))
                 } else if (hasKey) {
                     Hint(stringResource(R.string.settings_ai_key_keep))
@@ -130,32 +150,49 @@ internal fun AiSettingsScreen(
             }
 
             Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = { vm.saveProvider(provider, model, key) },
+            Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(stringResource(R.string.settings_ai_save))
-            }
-            Spacer(Modifier.height(8.dp))
-            FilledTonalButton(
-                onClick = { vm.verify(provider) },
-                enabled = hasKey && key.isBlank() && verify !is AiVerifyState.Running,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            ) {
-                Text(stringResource(if (verify is AiVerifyState.Running) R.string.settings_ai_verify_running else R.string.settings_ai_verify))
-            }
-            if (hasKey) {
-                TextButton(
-                    onClick = { vm.clearKey(provider) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                Button(
+                    onClick = { vm.saveProvider(provider, model, if (replacingKey) key else "") },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.settings_ai_save))
+                }
+                OutlinedButton(
+                    onClick = {
+                        key = ""
+                        replacingKey = false
+                        vm.clearKey(provider)
+                    },
+                    enabled = hasKey,
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(R.string.settings_ai_clear_key))
                 }
             }
+            SaveMessage(save)
+
+            Spacer(Modifier.height(12.dp))
+            SettingsGroup(title = stringResource(R.string.settings_ai_test)) {
+                Hint(stringResource(R.string.settings_ai_test_hint))
+                FilledTonalButton(
+                    onClick = { vm.verify(provider) },
+                    enabled = hasKey && !replacingKey && verify !is AiVerifyState.Running,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        stringResource(
+                            if (verify is AiVerifyState.Running) R.string.settings_ai_verify_running
+                            else R.string.settings_ai_verify,
+                        ),
+                    )
+                }
+                VerifyMessage(verify)
+            }
         }
 
-        SaveMessage(save)
-        VerifyMessage(verify)
         Spacer(Modifier.height(8.dp))
         Hint(stringResource(R.string.settings_ai_privacy))
         Hint(stringResource(R.string.settings_ai_no_builtin))
