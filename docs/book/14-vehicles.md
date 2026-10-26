@@ -133,7 +133,7 @@ to the new weight, keeping the cycle and conditions, and estimates a figure only
 reference data is missing. The parser accepts the same wrapping and quoted numbers as the search
 parser. An answer with no usable figure is a distinct empty-answer error.
 
-Average driver speeds and trip averages are deliberately absent: those are behaviour, not
+Average driver speeds and trip averages are deliberately absent: those are behavior, not
 manufacturer data. They are manual-only fields in the editor. Other derived values are also
 excluded: range and electric range, payload, power-to-weight, acceleration, CO2, cost per
 kilometer, trip cost, toll class, charging time and ETA.

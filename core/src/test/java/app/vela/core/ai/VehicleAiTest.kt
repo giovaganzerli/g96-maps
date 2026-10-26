@@ -81,7 +81,7 @@ class VehicleAiParserTest {
 
     @Test
     fun `missing keys become null and unknown keys are ignored`() {
-        val payload = VehicleAiParser.parse("""{"make":"Fiat","model":"Panda","colour":"red"}""")!!
+        val payload = VehicleAiParser.parse("""{"make":"Fiat","model":"Panda","color":"red"}""")!!
 
         assertEquals("Fiat", payload.make)
         assertEquals("Panda", payload.model)

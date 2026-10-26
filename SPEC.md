@@ -3690,7 +3690,7 @@ prices under the Open Government Licence v3.0.
   turns an unknown enum or implausible number into `null`. It accepts legacy keys but they no
   longer appear in a normalized answer. Derived values are not requested: range or electric
   range, payload, power-to-weight, acceleration, CO2, cost per km, trip cost, toll class,
-  charging time and ETA. Average speeds and trip averages are excluded as behaviour, not
+  charging time and ETA. Average speeds and trip averages are excluded as behavior, not
   manufacturer data. The provider sees only the structured criteria, the redacted variant and
   this schema.
 - After parsing, `VehicleAiMerge` restores the typed make, model, year, fuel and typed variant.
