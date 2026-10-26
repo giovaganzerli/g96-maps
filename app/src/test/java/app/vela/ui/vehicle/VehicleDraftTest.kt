@@ -169,6 +169,56 @@ class VehicleDraftTest {
     }
 
     @Test
+    fun `an electric vehicle sends and receives only electric figures`() {
+        val electric = complete.withFuel(FuelType.ELECTRIC).copy(
+            weightKg = "1800",
+            batteryKwh = "58",
+            energyKwh100km = "17,2",
+            energyUrbanKwh100km = "15,1",
+            energyExtraUrbanKwh100km = "16,0",
+            energyMotorwayKwh100km = "21,4",
+        )
+
+        val input = electric.consumptionInput(referenceWeightKg = 1700)!!
+        assertNull(input.emissionStandard)
+        assertNull(input.engineDisplacementCc)
+        assertNull(input.tankL)
+        assertNull(input.currentConsumptionL100km)
+        assertEquals(1800, input.weightKg)
+        assertEquals(1700, input.referenceWeightKg)
+        assertEquals(58.0, input.batteryKwh!!, 0.0001)
+        assertEquals(17.2, input.currentEnergyKwh100km!!, 0.0001)
+        assertEquals(15.1, input.currentEnergyUrbanKwh100km!!, 0.0001)
+        assertEquals(16.0, input.currentEnergyExtraUrbanKwh100km!!, 0.0001)
+        assertEquals(21.4, input.currentEnergyMotorwayKwh100km!!, 0.0001)
+
+        val applied = electric.withRecalculatedConsumption(
+            VehicleConsumptionPayload(
+                consumptionL100km = 5.1,
+                energyKwh100km = 18.4,
+                energyUrbanKwh100km = 16.2,
+                energyExtraUrbanKwh100km = 17.1,
+                energyMotorwayKwh100km = 22.8,
+            ),
+        )
+
+        assertEquals("", applied.draft.consumptionL100km)
+        assertEquals(formatNumber(18.4), applied.draft.energyKwh100km)
+        assertEquals(formatNumber(16.2), applied.draft.energyUrbanKwh100km)
+        assertEquals(formatNumber(17.1), applied.draft.energyExtraUrbanKwh100km)
+        assertEquals(formatNumber(22.8), applied.draft.energyMotorwayKwh100km)
+        assertEquals(
+            setOf(
+                VehicleAiField.ENERGY_KWH100KM,
+                VehicleAiField.ENERGY_URBAN_KWH100KM,
+                VehicleAiField.ENERGY_EXTRA_URBAN_KWH100KM,
+                VehicleAiField.ENERGY_MOTORWAY_KWH100KM,
+            ),
+            applied.badges,
+        )
+    }
+
+    @Test
     fun `a null figure leaves the existing value and badge alone`() {
         val applied = complete.copy(
             consumptionL100km = "4.2",

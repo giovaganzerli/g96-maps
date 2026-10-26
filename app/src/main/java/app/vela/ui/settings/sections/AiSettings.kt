@@ -52,6 +52,21 @@ import app.vela.ui.vehicle.aiProviderLabel
 private const val SAVED_KEY_MASK = "••••••••••••"
 private const val MASK_CHAR = '•'
 
+internal data class AiKeyEdit(val key: String, val replacing: Boolean)
+
+/**
+ * Any edit marks the field as a replacement, including the first key on a provider that has none.
+ * Without that, Save would pass an empty string for a first key and leave the provider keyless.
+ */
+internal fun editAiKey(hasKey: Boolean, replacingKey: Boolean, newValue: String): AiKeyEdit {
+    val text = if (hasKey && !replacingKey) {
+        newValue.filterNot { it == MASK_CHAR }
+    } else {
+        newValue
+    }
+    return AiKeyEdit(key = text, replacing = true)
+}
+
 @Composable
 internal fun AiSettingsScreen(
     onBack: () -> Unit,
@@ -124,12 +139,9 @@ internal fun AiSettingsScreen(
                 OutlinedTextField(
                     value = if (hasKey && !replacingKey) SAVED_KEY_MASK else key,
                     onValueChange = { newValue ->
-                        if (hasKey && !replacingKey) {
-                            replacingKey = true
-                            key = newValue.filterNot { it == MASK_CHAR }
-                        } else {
-                            key = newValue
-                        }
+                        val edit = editAiKey(hasKey, replacingKey, newValue)
+                        key = edit.key
+                        replacingKey = edit.replacing
                         vm.consumeSaveState()
                         vm.consumeVerifyState()
                     },
@@ -155,7 +167,7 @@ internal fun AiSettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Button(
-                    onClick = { vm.saveProvider(provider, model, if (replacingKey) key else "") },
+                    onClick = { vm.saveProvider(provider, model, key) },
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(R.string.settings_ai_save))
